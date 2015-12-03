@@ -51,8 +51,9 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 
 	public enum ArmPosition { BACK, MIDDLE, FORWARD }
 
-	final long intervalMilliseconds = 10;
+	final long intervalMilliseconds = 20;
 	final float minimumArmSensitivity = Math.abs(0.5f);
+	final double movementRate = 0.5;
 
 	DcMotor motorRight;
 	DcMotor motorLeft;
@@ -231,11 +232,11 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 
 				if (directionIsForward)
 				{
-					powerToApply = 1.0;
+					powerToApply = movementRate;
 				}
 				else
 				{
-					powerToApply = -1.0;
+					powerToApply = movementRate * -1.0;
 				}
 
 				// continue moving the arm
