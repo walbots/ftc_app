@@ -48,11 +48,19 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 	 * Also, as the claw servo approaches 0, the claw opens up (drops the game element).
 	 */
 	// TETRIX VALUES.
-	final static double ARM_MIN_RANGE  = 0.20;
-	final static double ARM_MAX_RANGE  = 0.90;
+
+	public enum ArmPosition { BACK, MIDDLE, FORWARD }
+
+	final long intervalMilliseconds = 10;
+	final float minimumArmSensitivity = Math.abs(0.5f);
 
 	DcMotor motorRight;
 	DcMotor motorLeft;
+	DcMotor motorArm;
+
+	ArmPosition currentArmPosition;
+	boolean directionIsForward;
+	long armMovementStopMilliseconds = 0;
 
 	/**
 	 * Constructor
@@ -89,6 +97,8 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 		motorRight = hardwareMap.dcMotor.get("motor_3");
 		motorLeft = hardwareMap.dcMotor.get("motor_1");
 		motorLeft.setDirection(DcMotor.Direction.REVERSE);
+
+		motorArm = hardwareMap.dcMotor.get("motor_2");
 	}
 
 	/*
@@ -112,6 +122,7 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 		// and 1 is full right
 		float throttle = -gamepad1.left_stick_y;
 		float direction = gamepad1.left_stick_x;
+		float armthrottle = gamepad1.right_stick_y;
 
 		float right = throttle - direction;
 		float left = throttle + direction;
@@ -129,6 +140,7 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 		motorRight.setPower(right);
 		motorLeft.setPower(left);
 
+		currentArmPosition = moveArm(armthrottle, currentArmPosition);
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
@@ -187,4 +199,82 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 		return dScale;
 	}
 
+	ArmPosition moveArm (float throttle, ArmPosition armPosition)
+	{
+		ArmPosition result = armPosition;
+
+		// if armMovementStopMilliseconds is not zero, move the arm in the specified direction
+		// if armMovementStartMilliseoncds is zero, record current time there
+
+		if (armMovementStopMilliseconds == 0)
+		{
+			if (Math.abs(throttle) >= minimumArmSensitivity)
+			{
+				boolean desiredDirectionIsForward = throttle > 0;
+
+				if ((desiredDirectionIsForward && armPosition != ArmPosition.FORWARD) ||
+						(!desiredDirectionIsForward && armPosition != ArmPosition.BACK))
+				{
+					armMovementStopMilliseconds = System.currentTimeMillis() + intervalMilliseconds;
+					directionIsForward = desiredDirectionIsForward;
+				}
+			}
+		}
+		else // movement has been commanded to begin already
+		{
+			// check the time against the interval
+
+			// if before end of interval, apply power
+			if (System.currentTimeMillis() < armMovementStopMilliseconds)
+			{
+				double powerToApply = 0;
+
+				if (directionIsForward)
+				{
+					powerToApply = 1.0;
+				}
+				else
+				{
+					powerToApply = -1.0;
+				}
+
+				// continue moving the arm
+
+				motorArm.setPower(powerToApply);
+			}
+			// if after end of interval, clear armMovementStopMilliseconds and change armPosition
+			else
+			{
+				armMovementStopMilliseconds = 0;
+
+				// we might have to actually tell the motor to stop
+				motorArm.setPower(0.0);
+
+				if (directionIsForward)
+				{
+					if (armPosition == ArmPosition.BACK)
+					{
+						result = ArmPosition.MIDDLE;
+					}
+					else // must have started in the middle
+					{
+						result = ArmPosition.FORWARD;
+					}
+				}
+				else
+				{
+					if (armPosition == ArmPosition.FORWARD)
+					{
+						result = ArmPosition.MIDDLE;
+					}
+					else
+					{
+						result = ArmPosition.BACK;
+					}
+				}
+			}
+		}
+
+		return result;
+	}
 }
