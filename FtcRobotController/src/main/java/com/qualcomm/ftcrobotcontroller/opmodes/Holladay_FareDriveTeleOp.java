@@ -34,6 +34,8 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.Servo;
+
 
 /**
  * TeleOp Mode
@@ -45,7 +47,7 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 	/*
 	 * Note: the configuration of the servos is such that
 	 * as the arm servo approaches 0, the arm position moves up (away from the floor).
-	 * Also, as the claw servo approaches 0, the claw opens up (drops the game element).
+	 * Also, as the arm servo approaches 0, the arm opens up (drops the game element).
 	 */
 	// TETRIX VALUES.
 
@@ -55,13 +57,15 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 	final float minimumArmSensitivity = Math.abs(0.5f);
 	final double movementRate = 0.5;
 
+
 	DcMotor motorRight;
 	DcMotor motorLeft;
-	DcMotor motorArm;
+	//DcMotor motorArm;
 
-	ArmPosition currentArmPosition;
-	boolean directionIsForward;
-	long armMovementStopMilliseconds = 0;
+
+	//ArmPosition currentArmPosition;
+	//boolean directionIsForward;
+	//long armMovementStopMilliseconds = 0;
 
 	/**
 	 * Constructor
@@ -77,8 +81,6 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 	 */
 	@Override
 	public void init() {
-
-
 		/*
 		 * Use the hardwareMap to get the dc motors and servos by name. Note
 		 * that the names of the devices must match the names used when you
@@ -91,15 +93,15 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 		 *   "motor_1" is on the right side of the bot.
 		 *   "motor_2" is on the left side of the bot and reversed.
 		 *   
-		 * We also assume that there are two servos "servo_1" and "servo_6"
-		 *    "servo_1" controls the arm joint of the manipulator.
-		 *    "servo_6" controls the claw joint of the manipulator.
+		 * We also assume that there is one servo "servo_1"
+		 *    "servo_1" controls the angle of the arm.
 		 */
 		motorRight = hardwareMap.dcMotor.get("motor_3");
 		motorLeft = hardwareMap.dcMotor.get("motor_1");
 		motorLeft.setDirection(DcMotor.Direction.REVERSE);
 
-		motorArm = hardwareMap.dcMotor.get("motor_2");
+		//motorArm = hardwareMap.dcMotor.get("motor_2");
+
 	}
 
 	/*
@@ -109,12 +111,11 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 	 */
 	@Override
 	public void loop() {
-
 		/*
 		 * Gamepad 1
 		 * 
 		 * Gamepad 1 controls the motors via the left stick, and it controls the
-		 * wrist/claw via the a,b, x, y buttons
+		 * wrist/arm via the a,b, x, y buttons
 		 */
 
 		// throttle: left_stick_y ranges from -1 to 1, where -1 is full up, and
@@ -141,7 +142,9 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 		motorRight.setPower(right);
 		motorLeft.setPower(left);
 
-		currentArmPosition = moveArm(armthrottle, currentArmPosition);
+
+
+
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
@@ -152,7 +155,7 @@ public class Holladay_FareDriveTeleOp extends OpMode {
         telemetry.addData("Text", "*** Robot Data***");
         telemetry.addData("left tgt pwr",  "left  pwr: " + String.format("%.2f", left));
         telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
-
+//		telemetry.addData("arm position", "arm   pos: " + String.format("%.2d", armPosition));
 	}
 
 	/*
@@ -197,9 +200,9 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 		}
 
 		// return scaled value.
-		return dScale;
+		return dScale * 0.6;// the factor is to lower the power output to the motors
 	}
-
+/*
 	ArmPosition moveArm (float throttle, ArmPosition armPosition)
 	{
 		ArmPosition result = armPosition;
@@ -278,4 +281,5 @@ public class Holladay_FareDriveTeleOp extends OpMode {
 
 		return result;
 	}
+*/
 }

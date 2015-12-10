@@ -41,7 +41,12 @@ import com.qualcomm.robotcore.util.Range;
  * <p>
  * Enables control of the robot via the gamepad
  */
-public class FWDriveTeleOp extends OpMode {
+public class CompTeleOp extends OpMode {
+
+	final static double ARM_MIN_RANGE  = 0.20;
+	final static double ARM_MAX_RANGE  = 0.90;
+	final static double ARM_DELTA = 0.1;
+	final static double ARM_FILTER = 0.1;
 
 	/*
 	 * Note: the configuration of the servos is such that
@@ -49,35 +54,21 @@ public class FWDriveTeleOp extends OpMode {
 	 * Also, as the arm servo approaches 0, the arm opens up (drops the game element).
 	 */
 	// TETRIX VALUES.
-	final static double ARM_MIN_RANGE  = 0.20;
-	final static double ARM_MAX_RANGE  = 0.90;
-	final static double CLAW_MIN_RANGE  = 0.20;
-	final static double CLAW_MAX_RANGE  = 0.7;
 
-	// position of the arm servo.
-	double armPosition;
 
-	// amount to change the arm servo position.
-	double armDelta = 0.1;
-
-	// position of the arm servo
-	double clawPosition;
-
-	// amount to change the arm servo position by
-	double clawDelta = 0.1;
 
 	DcMotor motorRight;
+	DcMotor motorBody;
 	DcMotor motorLeft;
-	DcMotor motorLeftf;
-	DcMotor motorRightf;
-	//Servo arm;
-	//Servo arm;
+	DcMotor motorArm;
+	Servo servoScoop;
+
+	long time;
 
 	/**
 	 * Constructor
 	 */
-	public FWDriveTeleOp() {
-
+	public CompTeleOp() {
 	}
 
 	/*
@@ -87,7 +78,10 @@ public class FWDriveTeleOp extends OpMode {
 	 */
 	@Override
 	public void init() {
-
+// this is a line of random text just for people who spend thier time reading scorce code comments
+		//and the comment continues maby we will get a laugh when we go through this code later
+		// but we probly wont look through it "i just found a new place to find a dead body"~ Luke
+		//"90% of people dont look at scoce code" ya that does seem like something true
 
 		/*
 		 * Use the hardwareMap to get the dc motors and servos by name. Note
@@ -107,16 +101,12 @@ public class FWDriveTeleOp extends OpMode {
 		 */
 		motorRight = hardwareMap.dcMotor.get("motor_2");
 		motorLeft = hardwareMap.dcMotor.get("motor_1");
-		motorRightf = hardwareMap.dcMotor.get("motor_3");
-		motorLeftf = hardwareMap.dcMotor.get("motor_4");
-		motorLeft.setDirection(DcMotor.Direction.REVERSE);
-		
-		//arm = hardwareMap.servo.get("servo_1");
-		//arm = hardwareMap.servo.get("servo_6");
-
-		// assign the starting position of the wrist and arm
-		armPosition = 0.2;
-		clawPosition = 0.2;
+		motorRight.setDirection(DcMotor.Direction.REVERSE);
+		motorBody = hardwareMap.dcMotor.get("motor_3");
+		motorArm = hardwareMap.dcMotor.get("motor_4");
+		servoScoop = hardwareMap.servo.get("servo_1");
+		servoScoop.scaleRange(ARM_MIN_RANGE, ARM_MAX_RANGE);
+		servoScoop.setPosition(ARM_MIN_RANGE);
 	}
 
 	/*
@@ -130,65 +120,28 @@ public class FWDriveTeleOp extends OpMode {
 		/*
 		 * Gamepad 1
 		 * 
-		 * Gamepad 1 controls the motors via the left stick, and it controls the
-		 * wrist/arm via the a,b, x, y buttons
+		 * Gamepad 1 controls the motors via the left and right sticks.
 		 */
+		double powerLeft = determinePowerFromInput(gamepad1.left_stick_y);
+		double powerRight = determinePowerFromInput(gamepad1.right_stick_y);
+		double powerRotate = determinePowerFromInput(gamepad2.right_stick_x);
+		double powerArm = determinePowerFromInput(gamepad2.left_stick_y) * ARM_FILTER;
+		boolean servoUp = gamepad2.right_bumper;
+		boolean servoDown = gamepad2.left_bumper;
+		double servoPosition = servoScoop.getPosition();
 
-		// throttle: left_stick_y ranges from -1 to 1, where -1 is full up, and
-		// 1 is full down
-		// direction: left_stick_x ranges from -1 to 1, where -1 is full left
-		// and 1 is full right
-		float throttle = -gamepad1.left_stick_x;
-		float direction = gamepad1.left_stick_y;
-		float right = throttle - direction;
-		float left = throttle + direction;
+		motorRight.setPower(powerRight);
+		motorLeft.setPower(powerLeft);
+		motorBody.setPower(powerRotate);
+		motorArm.setPower(powerArm);
 
-		// clip the right/left values so that the values never exceed +/- 1
-		right = Range.clip(right, -1, 1);
-		left = Range.clip(left, -1, 1);
-
-		// scale the joystick value to make it easier to control
-		// the robot more precisely at slower speeds.
-		right = (float)scaleInput(right);
-		left =  (float)scaleInput(left);
-		
-		// write the values to the motors
-		motorRight.setPower(right);
-		motorLeft.setPower(left);
-		motorRightf.setPower(right);
-		motorLeftf.setPower(left);
-
-		// update the position of the arm.
-		if (gamepad1.a) {
-			// if the A button is pushed on gamepad1, increment the position of
-			// the arm servo.
-			armPosition += armDelta;
+		if (servoUp){
+			servoPosition += ARM_DELTA;
 		}
-
-		if (gamepad1.y) {
-			// if the Y button is pushed on gamepad1, decrease the position of
-			// the arm servo.
-			armPosition -= armDelta;
+		else if (servoDown){
+			servoPosition -= ARM_DELTA;
 		}
-
-		// update the position of the arm
-		if (gamepad1.x) {
-			clawPosition += clawDelta;
-		}
-
-		if (gamepad1.b) {
-			clawPosition -= clawDelta;
-		}
-
-        // clip the position values so that they never exceed their allowed range.
-        armPosition = Range.clip(armPosition, ARM_MIN_RANGE, ARM_MAX_RANGE);
-        clawPosition = Range.clip(clawPosition, CLAW_MIN_RANGE, CLAW_MAX_RANGE);
-
-		// write position values to the wrist and arm servo
-		//arm.setPosition(armPosition);
-		//arm.setPosition(armPosition);
-
-
+		servoScoop.setPosition(servoPosition);
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
@@ -196,12 +149,9 @@ public class FWDriveTeleOp extends OpMode {
 		 * will return a null value. The legacy NXT-compatible motor controllers
 		 * are currently write only.
 		 */
-        telemetry.addData("Text", "*** Robot Data***");
-        telemetry.addData("arm", "arm:  " + String.format("%.2f", armPosition));
-        telemetry.addData("arm", "arm:  " + String.format("%.2f", clawPosition));
-        telemetry.addData("left tgt pwr",  "left  pwr: " + String.format("%.2f", left));
-        telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
-
+        telemetry.addData("drive pwr", "lt : " + String.format("%.2f", powerLeft) + " rt: " + String.format("%.2f", powerRight));
+		telemetry.addData("arm pwr", "ro: " + String.format("%.2f", powerRotate) + " el:" + String.format("%.2f", powerArm));
+		telemetry.addData("scoop", "scoop " + (servoUp ? "UP" : (servoDown ? "DOWN" : "N/A")));
 	}
 
 	/*
@@ -213,7 +163,8 @@ public class FWDriveTeleOp extends OpMode {
 	public void stop() {
 
 	}
-
+        //Dead Body
+	/* (
     	
 	/*
 	 * This method scales the joystick input so for low joystick values, the 
@@ -249,4 +200,16 @@ public class FWDriveTeleOp extends OpMode {
 		return dScale;
 	}
 
+	double determinePowerFromInput(double dVal)  {
+		double power = dVal;
+
+		// throttle: left_stick_y ranges from -1 to 1, where -1 is full up, and
+		// 1 is full down
+		// direction: left_stick_x ranges from -1 to 1, where -1 is full left
+
+		power = Range.clip(power, -1, 1);
+		power =  (float)scaleInput(power);
+
+		return power;
+	}
 }
