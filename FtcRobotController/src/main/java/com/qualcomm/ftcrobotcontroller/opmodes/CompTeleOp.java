@@ -49,11 +49,13 @@ public class CompTeleOp extends OpMode {
 	final static double FILTER_ARM_DOWN = 0.2;
     final static double FILTER_ARM_UP = 0.6;
 	final static double FILTER_DRIVE = 0.5;
+    final static double FILTER_GRABBER = 0.5;
     final static double FILTER_ROTATE = 0.4;
     final static double RANGE_ARM_MAX = 0.90;
     final static double RANGE_ARM_MIN = 0.20;
 
     DcMotor motorArm;
+    DcMotor motorGrabber;
     DcMotor motorLeft;
 	DcMotor motorRight;
 	DcMotor motorRotate;
@@ -92,6 +94,7 @@ public class CompTeleOp extends OpMode {
 		//servoScoop.scaleRange(RANGE_ARM_MIN, RANGE_ARM_MAX);
         currentScoopPosition = RANGE_ARM_MIN;
         servoScoop.setPosition(currentScoopPosition);
+        motorGrabber = hardwareMap.dcMotor.get("motor_5");
 	}
 
 	/*
@@ -112,8 +115,23 @@ public class CompTeleOp extends OpMode {
 		double powerRotate = determinePowerFromInput(gamepad2.right_stick_x) * FILTER_ROTATE;
 		double powerArm = determinePowerFromInput(gamepad2.left_stick_y);
         double powerScoop = gamepad2.right_stick_y;
+        double powerGrabber = 0.0;
 		boolean servoUp = powerScoop > 0.0;//gamepad2.right_bumper;
 		boolean servoDown = powerScoop < 0.0;//gamepad2.left_bumper;
+
+        if (gamepad1.left_trigger == 0.0)
+        {
+            if (gamepad1.right_trigger != 0.0)
+            {
+                powerGrabber = -gamepad1.right_trigger;
+            }
+        }
+        else
+        {
+            powerGrabber = gamepad1.left_trigger;
+        }
+
+        powerGrabber = determinePowerFromInput(powerGrabber) * FILTER_GRABBER;
 
         if (gamepad2.left_trigger == 0.0)
         {
@@ -129,11 +147,6 @@ public class CompTeleOp extends OpMode {
                 powerArm = powerArm * FILTER_ARM_UP;
             }
         }
-
-        motorRight.setPower(powerRight);
-		motorLeft.setPower(powerLeft);
-        motorRotate.setPower(powerRotate);
-		motorArm.setPower(powerArm);
 
         if (gamepad2.right_trigger == 0.0)
         {
@@ -161,6 +174,12 @@ public class CompTeleOp extends OpMode {
         currentScoopPosition = Range.clip(currentScoopPosition, 0.0, 1.0);
 
         servoScoop.setPosition(currentScoopPosition);
+
+        motorRight.setPower(powerRight);
+        motorLeft.setPower(powerLeft);
+        motorRotate.setPower(powerRotate);
+        motorArm.setPower(powerArm);
+        motorGrabber.setPower(powerGrabber);
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
