@@ -43,10 +43,14 @@ import com.qualcomm.robotcore.util.Range;
  */
 public class CompTeleOp extends OpMode {
 
-	final static double ARM_MIN_RANGE  = 0.20;
-	final static double ARM_MAX_RANGE  = 0.90;
-	final static double ARM_DELTA = 0.1;
-	final static double ARM_FILTER = 0.1;
+    final static double DELTA_SCOOP_LEVELING = 0.0005;
+	final static double DELTA_SCOOP_NORMAL = 0.003;
+	final static double FILTER_ARM_DOWN = 0.2;
+    final static double FILTER_ARM_UP = 0.6;
+	final static double FILTER_DRIVE = 0.5;
+    final static double FILTER_ROTATE = 0.4;
+    final static double RANGE_ARM_MAX = 0.90;
+    final static double RANGE_ARM_MIN = 0.20;
 
 	/*
 	 * Note: the configuration of the servos is such that
@@ -57,13 +61,13 @@ public class CompTeleOp extends OpMode {
 
 
 
+    DcMotor motorArm;
+    DcMotor motorLeft;
 	DcMotor motorRight;
-	DcMotor motorBody;
-	DcMotor motorLeft;
-	DcMotor motorArm;
+	DcMotor motorRotate;
 	Servo servoScoop;
 
-	long time;
+	double currentScoopPosition;
 
 	/**
 	 * Constructor
@@ -102,11 +106,14 @@ public class CompTeleOp extends OpMode {
 		motorRight = hardwareMap.dcMotor.get("motor_2");
 		motorLeft = hardwareMap.dcMotor.get("motor_1");
 		motorRight.setDirection(DcMotor.Direction.REVERSE);
-		motorBody = hardwareMap.dcMotor.get("motor_3");
+		motorRotate = hardwareMap.dcMotor.get("motor_3");
+        motorRotate.setDirection(DcMotor.Direction.REVERSE);
 		motorArm = hardwareMap.dcMotor.get("motor_4");
-		servoScoop = hardwareMap.servo.get("servo_1");
-		servoScoop.scaleRange(ARM_MIN_RANGE, ARM_MAX_RANGE);
-		servoScoop.setPosition(ARM_MIN_RANGE);
+        motorArm.setDirection(DcMotor.Direction.REVERSE);
+        servoScoop = hardwareMap.servo.get("servo_1");
+		//servoScoop.scaleRange(RANGE_ARM_MIN, RANGE_ARM_MAX);
+        currentScoopPosition = RANGE_ARM_MIN;
+        servoScoop.setPosition(currentScoopPosition);
 	}
 
 	/*
@@ -122,26 +129,60 @@ public class CompTeleOp extends OpMode {
 		 * 
 		 * Gamepad 1 controls the motors via the left and right sticks.
 		 */
-		double powerLeft = determinePowerFromInput(gamepad1.left_stick_y);
-		double powerRight = determinePowerFromInput(gamepad1.right_stick_y);
-		double powerRotate = determinePowerFromInput(gamepad2.right_stick_x);
-		double powerArm = determinePowerFromInput(gamepad2.left_stick_y) * ARM_FILTER;
-		boolean servoUp = gamepad2.right_bumper;
-		boolean servoDown = gamepad2.left_bumper;
-		double servoPosition = servoScoop.getPosition();
+		double powerLeft = determinePowerFromInput(gamepad1.left_stick_y) * FILTER_DRIVE;
+		double powerRight = determinePowerFromInput(gamepad1.right_stick_y) * FILTER_DRIVE;
+		double powerRotate = determinePowerFromInput(gamepad2.right_stick_x) * FILTER_ROTATE;
+		double powerArm = determinePowerFromInput(gamepad2.left_stick_y);
+        double powerScoop = gamepad2.right_stick_y;
+		boolean servoUp = powerScoop > 0.0;//gamepad2.right_bumper;
+		boolean servoDown = powerScoop < 0.0;//gamepad2.left_bumper;
 
-		motorRight.setPower(powerRight);
+        if (gamepad2.left_trigger == 0.0)
+        {
+            if (powerArm > 0.0)
+            {
+                powerArm = powerArm * FILTER_ARM_DOWN;
+            }
+        }
+        else
+        {
+            if (powerArm < 0.0)
+            {
+                powerArm = powerArm * FILTER_ARM_UP;
+            }
+        }
+
+        motorRight.setPower(powerRight);
 		motorLeft.setPower(powerLeft);
-		motorBody.setPower(powerRotate);
+        motorRotate.setPower(powerRotate);
 		motorArm.setPower(powerArm);
 
-		if (servoUp){
-			servoPosition += ARM_DELTA;
-		}
-		else if (servoDown){
-			servoPosition -= ARM_DELTA;
-		}
-		servoScoop.setPosition(servoPosition);
+        if (gamepad2.right_trigger == 0.0)
+        {
+            if (servoUp)
+            {
+                currentScoopPosition += DELTA_SCOOP_NORMAL;
+            }
+            else if (servoDown)
+            {
+                currentScoopPosition -= DELTA_SCOOP_NORMAL;
+            }
+        }
+        else
+        {
+            if (powerArm < 0.0)
+            {
+                currentScoopPosition -= DELTA_SCOOP_LEVELING;
+            }
+            else if (powerArm > 0.0)
+            {
+                currentScoopPosition += DELTA_SCOOP_LEVELING;
+            }
+        }
+
+        currentScoopPosition = Range.clip(currentScoopPosition, 0.0, 1.0);
+
+        servoScoop.setPosition(currentScoopPosition);
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
@@ -149,9 +190,9 @@ public class CompTeleOp extends OpMode {
 		 * will return a null value. The legacy NXT-compatible motor controllers
 		 * are currently write only.
 		 */
-        telemetry.addData("drive pwr", "lt : " + String.format("%.2f", powerLeft) + " rt: " + String.format("%.2f", powerRight));
-		telemetry.addData("arm pwr", "ro: " + String.format("%.2f", powerRotate) + " el:" + String.format("%.2f", powerArm));
-		telemetry.addData("scoop", "scoop " + (servoUp ? "UP" : (servoDown ? "DOWN" : "N/A")));
+        telemetry.addData("drive pwr", "lft : " + String.format("%.2f", powerLeft) + " rgt: " + String.format("%.2f", powerRight));
+        telemetry.addData("arm pwr", "rot: " + String.format("%.2f", powerRotate) + " elv:" + String.format("%.2f", powerArm));
+        telemetry.addData("scoop", "pos: " + String.format("%.2f", currentScoopPosition) + " " + (servoUp ? "UP" : (servoDown ? "DOWN" : "IDLE")));
 	}
 
 	/*
