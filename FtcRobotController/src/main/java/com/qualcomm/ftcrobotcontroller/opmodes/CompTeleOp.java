@@ -1,4 +1,5 @@
 /* Copyright (c) 2014 Qualcomm Technologies Inc
+ * Additional copyright (c) 2015 Waldorf School of the Peninsula
 
 All rights reserved.
 
@@ -52,15 +53,6 @@ public class CompTeleOp extends OpMode {
     final static double RANGE_ARM_MAX = 0.90;
     final static double RANGE_ARM_MIN = 0.20;
 
-	/*
-	 * Note: the configuration of the servos is such that
-	 * as the arm servo approaches 0, the arm position moves up (away from the floor).
-	 * Also, as the arm servo approaches 0, the arm opens up (drops the game element).
-	 */
-	// TETRIX VALUES.
-
-
-
     DcMotor motorArm;
     DcMotor motorLeft;
 	DcMotor motorRight;
@@ -82,10 +74,6 @@ public class CompTeleOp extends OpMode {
 	 */
 	@Override
 	public void init() {
-// this is a line of random text just for people who spend thier time reading scorce code comments
-		//and the comment continues maby we will get a laugh when we go through this code later
-		// but we probly wont look through it "i just found a new place to find a dead body"~ Luke
-		//"90% of people dont look at scoce code" ya that does seem like something true
 
 		/*
 		 * Use the hardwareMap to get the dc motors and servos by name. Note
@@ -93,16 +81,6 @@ public class CompTeleOp extends OpMode {
 		 * configured your robot and created the configuration file.
 		 */
 		
-		/*
-		 * For the demo Tetrix K9 bot we assume the following,
-		 *   There are two motors "motor_1" and "motor_2"
-		 *   "motor_1" is on the right side of the bot.
-		 *   "motor_2" is on the left side of the bot and reversed.
-		 *   
-		 * We also assume that there are two servos "servo_1" and "servo_6"
-		 *    "servo_1" controls the arm joint of the manipulator.
-		 *    "servo_6" controls the arm joint of the manipulator.
-		 */
 		motorRight = hardwareMap.dcMotor.get("motor_2");
 		motorLeft = hardwareMap.dcMotor.get("motor_1");
 		motorRight.setDirection(DcMotor.Direction.REVERSE);
@@ -125,9 +103,9 @@ public class CompTeleOp extends OpMode {
 	public void loop() {
 
 		/*
-		 * Gamepad 1
-		 * 
 		 * Gamepad 1 controls the motors via the left and right sticks.
+		 *
+		 * Gamepad2 controls the torso, arm and scoop.
 		 */
 		double powerLeft = determinePowerFromInput(gamepad1.left_stick_y) * FILTER_DRIVE;
 		double powerRight = determinePowerFromInput(gamepad1.right_stick_y) * FILTER_DRIVE;
@@ -204,9 +182,7 @@ public class CompTeleOp extends OpMode {
 	public void stop() {
 
 	}
-        //Dead Body
-	/* (
-    	
+
 	/*
 	 * This method scales the joystick input so for low joystick values, the 
 	 * scaled value is less than linear.  This is to make it easier to drive
