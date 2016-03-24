@@ -1,34 +1,4 @@
-/* Copyright (c) 2014 Qualcomm Technologies Inc
- * Additional copyright (c) 2015 Waldorf School of the Peninsula
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted (subject to the limitations in the disclaimer below) provided that
-the following conditions are met:
-
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-
-Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
-
-Neither the name of Qualcomm Technologies Inc nor the names of its contributors
-may be used to endorse or promote products derived from this software without
-specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
-LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+// Copyright 2016, Waldorf School of the Peninsula.
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
@@ -37,13 +7,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
-/**
- * TeleOp Mode
- * <p>
- * Enables control of the robot via the gamepad
- */
-public class CompTeleOp extends OpMode {
-
+public class CompTeleOp extends OpMode
+{
     final static double DELTA_SCOOP_LEVELING = 0.0005;
 	final static double DELTA_SCOOP_NORMAL = 0.003;
 	final static double FILTER_ARM_DOWN = 0.2;
@@ -54,47 +19,46 @@ public class CompTeleOp extends OpMode {
     final static double RANGE_ARM_MAX = 0.90;
     final static double RANGE_ARM_MIN = 0.20;
 
-    DcMotor motorArm;
-    DcMotor motorGrabber;
-    DcMotor motorLeft;
-	DcMotor motorRight;
-	DcMotor motorRotate;
-	Servo servoScoop;
+    DcMotor motorArm;         // this motor extends the arm
+    DcMotor motorElbow;       // this motor drives the "elbow"
+    DcMotor motorLeftWheels;  // these are the motors wired in series for the left wheels of the robot
+	DcMotor motorRightWheels; // these are the motors wired in series for the right wheels of the robot
+	DcMotor motorTorso;       // this motor drives the "torso" rotation
+	Servo   servoClawLeft;    // this servo drives the left half of the claw
+    Servo   servoClawRight;   // this servo drives the right half of the claw
 
 	double currentScoopPosition;
 
-	/**
-	 * Constructor
-	 */
-	public CompTeleOp() {
+	public CompTeleOp()
+    {
+        // the constructor, not much to do here in this design
 	}
 
-	/*
-	 * Code to run when the op mode is first enabled goes here
-	 * 
-	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
-	 */
+    // Code to run when the op mode is first enabled goes here
+    // @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
 	@Override
 	public void init() {
 
-		/*
-		 * Use the hardwareMap to get the dc motors and servos by name. Note
-		 * that the names of the devices must match the names used when you
-		 * configured your robot and created the configuration file.
-		 */
-		
-		motorRight = hardwareMap.dcMotor.get("motor_2");
-		motorLeft = hardwareMap.dcMotor.get("motor_1");
-		motorRight.setDirection(DcMotor.Direction.REVERSE);
-		motorRotate = hardwareMap.dcMotor.get("motor_3");
-        motorRotate.setDirection(DcMotor.Direction.REVERSE);
-		motorArm = hardwareMap.dcMotor.get("motor_4");
-        motorArm.setDirection(DcMotor.Direction.REVERSE);
-        servoScoop = hardwareMap.servo.get("servo_1");
-		//servoScoop.scaleRange(RANGE_ARM_MIN, RANGE_ARM_MAX);
+		// Use the hardwareMap to get the dc motors and servos by name.
+		// NOTE: The names of the devices must match the names used when you
+		// configured your robot and created the configuration file in the
+		// RobotController app, via ellipsis-vertical -> Settings -> Configure Robot.
+
+		motorRightWheels = hardwareMap.dcMotor.get("motor_2");
+		motorLeftWheels = hardwareMap.dcMotor.get("motor_1");
+		motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
+		motorTorso = hardwareMap.dcMotor.get("motor_4");
+        motorTorso.setDirection(DcMotor.Direction.REVERSE);
+		motorElbow = hardwareMap.dcMotor.get("motor_3");
+        motorElbow.setDirection(DcMotor.Direction.REVERSE);
+        motorArm = hardwareMap.dcMotor.get("motor_5");
         currentScoopPosition = RANGE_ARM_MIN;
-        servoScoop.setPosition(currentScoopPosition);
-        motorGrabber = hardwareMap.dcMotor.get("motor_5");
+        servoClawLeft = hardwareMap.servo.get("servo_1");
+		//servoClawLeft.scaleRange(RANGE_ARM_MIN, RANGE_ARM_MAX);
+        servoClawLeft.setPosition(currentScoopPosition);
+        servoClawRight = hardwareMap.servo.get("servo_2");
+        //servoClawRight.scaleRange(RANGE_ARM_MIN, RANGE_ARM_MAX);
+        servoClawRight.setPosition(currentScoopPosition);
 	}
 
 	/*
