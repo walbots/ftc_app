@@ -137,13 +137,12 @@ public class CompTeleOp extends OpMode
 
         currentScoopPosition = Range.clip(currentScoopPosition, 0.0, 1.0);
 
-        servoScoop.setPosition(currentScoopPosition);
+        servoClawLeft.setPosition(currentScoopPosition);
 
-        motorRight.setPower(powerRight);
-        motorLeft.setPower(powerLeft);
-        motorRotate.setPower(powerRotate);
-        motorArm.setPower(powerArm);
-        motorGrabber.setPower(powerGrabber);
+        motorRightWheels.setPower(powerRight);
+        motorLeftWheels.setPower(powerLeft);
+        motorTorso.setPower(powerRotate);
+        motorElbow.setPower(powerArm);
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
