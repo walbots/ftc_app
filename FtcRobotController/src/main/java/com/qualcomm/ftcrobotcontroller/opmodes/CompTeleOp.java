@@ -15,7 +15,8 @@ public class CompTeleOp extends OpMode
     final static double FILTER_ROTATE = 0.4;
     final static double RANGE_ARM_MAX = 0.90;
     final static double RANGE_ARM_MIN = 0.20;
-    final static double CLAW_START_POSITION = 0.20;
+    final static double CLAW_START_POSITION = 0;
+
 
     DcMotor motorArm;         // this motor extends the arm
     DcMotor motorElbow;       // this motor drives the "elbow"
@@ -52,7 +53,10 @@ public class CompTeleOp extends OpMode
 		//servoClawLeft.scaleRange(RANGE_ARM_MIN, RANGE_ARM_MAX);
         servoClawRight = hardwareMap.servo.get("servo_2");
         //servoClawRight.scaleRange(RANGE_ARM_MIN, RANGE_ARM_MAX);
-        setClawPositionFromLeftClawPosition(CLAW_START_POSITION);
+
+		servoClawLeft.setPosition(.5);
+		servoClawRight.setPosition(.5);
+
 	}
 
 	/*
@@ -74,7 +78,7 @@ public class CompTeleOp extends OpMode
         double powerElbow = determinePowerFromInput(gamepad2.left_stick_y);
 		double powerArmExtend = determinePowerFromInput(gamepad2.left_trigger);
         double powerArmRetract = determinePowerFromInput(gamepad2.right_trigger);
-        double clawClose = determinePowerFromInput(gamepad2.right_stick_x);
+        double clawDirection = determinePowerFromInput(gamepad2.right_stick_y);
 
         if (powerArmExtend > 0 && powerArmRetract > 0)
         {
@@ -91,12 +95,18 @@ public class CompTeleOp extends OpMode
             motorArm.setPower(powerArmRetract);
         }
 
-        //servoClawLeft.setPosition(currentScoopPosition);
+		clawDirection = Range.clip(clawDirection, .24, 1);
+
+		double RightClawPosition = clawDirection;
+		double LeftClawPostion = (1-clawDirection);
 
         motorElbow.setPower(powerElbow);
         motorRightWheels.setPower(powerRightDrive);
         motorLeftWheels.setPower(powerLeftDrive);
         motorTorso.setPower(powerRotateTorso);
+		servoClawLeft.setPosition(LeftClawPostion);
+		servoClawRight.setPosition(RightClawPosition);
+
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
@@ -105,7 +115,7 @@ public class CompTeleOp extends OpMode
 		 * are currently write only.
 		 */
         telemetry.addData("drive pwr", "lft : " + String.format("%.2f", powerLeftDrive) + " rgt: " + String.format("%.2f", powerRightDrive));
-        //telemetry.addData("arm pwr", "rot: " + String.format("%.2f", powerRotateTorso) + " elv:" + String.format("%.2f", powerArm));
+       // telemetry.addData("arm pwr", "rot: " + String.format("%.2f", powerRotateTorso) + " elv:" + String.format("%.2f", powerArm));
         //telemetry.addData("scoop", "pos: " + String.format("%.2f", currentScoopPosition) + " " + (servoUp ? "UP" : (servoDown ? "DOWN" : "IDLE")));
 	}
 
@@ -153,14 +163,7 @@ public class CompTeleOp extends OpMode
 		return dScale;
 	}
 
-    void setClawPositionFromLeftClawPosition(double leftClawPositionInput)
-    {
-        double leftClawPosition = Range.clip(leftClawPositionInput, 0.0, 90.0);
-        double rightClawPosition = Range.clip((180.0 - leftClawPosition), 90.0, 180.0);
 
-        servoClawLeft.setPosition(leftClawPosition);
-        servoClawRight.setPosition(rightClawPosition);
-    }
 
 	double determinePowerFromInput(double dVal)  {
 		double power = dVal;
