@@ -2,6 +2,10 @@
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
+import android.content.Context;
+import android.media.MediaPlayer;
+import android.net.Uri;
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -60,6 +64,8 @@ public class CompTeleOp extends OpMode
 		servoClawLeft.setPosition(.5);
 		servoClawRight.setPosition(.5);
 
+		mediaPlayer = new MediaPlayer();
+		mediaplayer.setDataSource(context, Uri.parse("android.resource://urpackagename/res/raw/theClaw");
 	}
 
 	/*
