@@ -26,6 +26,9 @@ public class CompTeleOp extends OpMode
 	Servo   servoClawLeft;    // this servo drives the left half of the claw
     Servo   servoClawRight;   // this servo drives the right half of the claw
 
+	Context mediaPlayerContext;
+	MediaPlayer mediaPlayer;
+
 	public CompTeleOp()
     {
         // the constructor, not much to do here in this design
@@ -79,6 +82,12 @@ public class CompTeleOp extends OpMode
 		double powerArmExtend = determinePowerFromInput(gamepad2.left_trigger);
         double powerArmRetract = determinePowerFromInput(gamepad2.right_trigger);
         double clawDirection = determinePowerFromInput(gamepad2.right_stick_y);
+
+		if (gamepad2.right_stick_y != 0.0)
+		{
+			mediaPlayer.prepareAsync();
+			mediaPlayer.pl
+		}
 
         if (powerArmExtend > 0 && powerArmRetract > 0)
         {
