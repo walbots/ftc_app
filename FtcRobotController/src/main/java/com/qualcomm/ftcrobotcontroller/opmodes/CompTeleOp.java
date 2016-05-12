@@ -2,23 +2,24 @@
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
-import android.content.Context;
 import android.media.MediaPlayer;
 import android.net.Uri;
 
+import com.qualcomm.ftcrobotcontroller.FtcRobotControllerActivity;
+import com.qualcomm.ftcrobotcontroller.R;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
+import java.io.IOException;
+
 public class CompTeleOp extends OpMode
 {
-	final static double FILTER_ARM_DOWN = 0.2;
-    final static double FILTER_ARM_UP = 0.6;
+    final static double FILTER_ARM = 0.6;
 	final static double FILTER_DRIVE = 0.5;
+	final static double FILTER_ELBOW = 0.2;
     final static double FILTER_ROTATE = 0.4;
-    final static double RANGE_ARM_MAX = 0.90;
-    final static double RANGE_ARM_MIN = 0.20;
     final static double CLAW_START_POSITION = 0;
 
 
@@ -30,7 +31,6 @@ public class CompTeleOp extends OpMode
 	Servo   servoClawLeft;    // this servo drives the left half of the claw
     Servo   servoClawRight;   // this servo drives the right half of the claw
 
-	Context mediaPlayerContext;
 	MediaPlayer mediaPlayer;
 
 	public CompTeleOp()
@@ -65,7 +65,24 @@ public class CompTeleOp extends OpMode
 		servoClawRight.setPosition(.5);
 
 		mediaPlayer = new MediaPlayer();
-		mediaplayer.setDataSource(context, Uri.parse("android.resource://urpackagename/res/raw/theClaw");
+
+		try
+		{
+			try
+			{
+				mediaPlayer.setDataSource(hardwareMap.appContext, Uri.parse("android.resource://com.qualcomm.ftcrobotcontroller/res/raw/theclaw"));
+//				mediaPlayer.setDataSource();hardwareMap.appContext.getResources().;
+				mediaPlayer.prepare();
+			}
+			catch (IOException ioe)
+			{
+				telemetry.addData("theclaw", "load failed");
+			}
+		}
+		catch (IllegalStateException ise)
+		{
+			telemetry.addData("theclaw", "load failed");
+		}
 	}
 
 	/*
@@ -89,10 +106,16 @@ public class CompTeleOp extends OpMode
         double powerArmRetract = determinePowerFromInput(gamepad2.right_trigger);
         double clawDirection = determinePowerFromInput(gamepad2.right_stick_y);
 
-		if (gamepad2.right_stick_y != 0.0)
+		try
 		{
-			mediaPlayer.prepareAsync();
-			mediaPlayer.pl
+			if (gamepad2.right_stick_y != 0.0 && !mediaPlayer.isPlaying())
+			{
+				mediaPlayer.start();
+			}
+		}
+		catch (IllegalStateException ise)
+		{
+			telemetry.addData("BOGUS", "HAPPENED");
 		}
 
         if (powerArmExtend > 0 && powerArmRetract > 0)
@@ -112,15 +135,15 @@ public class CompTeleOp extends OpMode
 
 		clawDirection = Range.clip(clawDirection, .24, 1);
 
-		double RightClawPosition = clawDirection;
-		double LeftClawPostion = (1-clawDirection);
+		double rightClawPosition = clawDirection;
+		double leftClawPostion = (1-clawDirection);
 
         motorElbow.setPower(powerElbow);
         motorRightWheels.setPower(powerRightDrive);
-        motorLeftWheels.setPower(powerLeftDrive);
-        motorTorso.setPower(powerRotateTorso);
-		servoClawLeft.setPosition(LeftClawPostion);
-		servoClawRight.setPosition(RightClawPosition);
+		motorLeftWheels.setPower(powerLeftDrive);
+		motorTorso.setPower(powerRotateTorso);
+		servoClawLeft.setPosition(leftClawPostion);
+		servoClawRight.setPosition(rightClawPosition);
 
 
 		/*
