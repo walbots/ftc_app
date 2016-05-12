@@ -130,8 +130,9 @@ public class CompTeleOp extends OpMode
 		 * are currently write only.
 		 */
         telemetry.addData("drive pwr", "lft : " + String.format("%.2f", powerLeftDrive) + " rgt: " + String.format("%.2f", powerRightDrive));
-       // telemetry.addData("arm pwr", "rot: " + String.format("%.2f", powerRotateTorso) + " elv:" + String.format("%.2f", powerArm));
-        //telemetry.addData("scoop", "pos: " + String.format("%.2f", currentScoopPosition) + " " + (servoUp ? "UP" : (servoDown ? "DOWN" : "IDLE")));
+		telemetry.addData("arm pwr", "ext: " + String.format("%.2f", powerArmExtend) + "ret: " + String.format("%.2f", powerArmRetract));
+		telemetry.addData("torso pwr",  String.format("%.2f", powerRotateTorso));
+		telemetry.addData("elbow pwr", String.format("%.2f", powerElbow));
 	}
 
 	/*
