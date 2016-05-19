@@ -69,8 +69,23 @@ public class CompTeleOp extends OpMode
 		servoClawLeft.setPosition(.5);
 		servoClawRight.setPosition(.5);
 
-		sensor1 = hardwareMap.touchSensor.get("sensor_1");
-		sensor2 = hardwareMap.touchSensor.get("sensor_2");
+		try
+		{
+			sensor1 = hardwareMap.touchSensor.get("sensor_1");
+		}
+		catch (IllegalArgumentException iae)
+		{
+			sensor1 = null;
+		}
+
+		try
+		{
+			sensor2 = hardwareMap.touchSensor.get("sensor_2");
+		}
+		catch (IllegalArgumentException iae)
+		{
+			sensor2 = null;
+		}
 
 		mediaPlayer = new MediaPlayer();
 
