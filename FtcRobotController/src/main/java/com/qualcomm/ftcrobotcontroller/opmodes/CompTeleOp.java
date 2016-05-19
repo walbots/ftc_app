@@ -11,17 +11,20 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import java.io.IOException;
 
 public class CompTeleOp extends OpMode
 {
-    final static double FILTER_ARM = 0.6;
+	final static double FILTER_ARM_DOWN = 0.2;
+    final static double FILTER_ARM_UP = 0.6;
+	final static double FILTER_ARM_EXTEND = 0.5;
 	final static double FILTER_DRIVE = 0.5;
 	final static double FILTER_ELBOW = 0.2;
     final static double FILTER_ROTATE = 0.4;
     final static double CLAW_START_POSITION = 0;
-
+	final static double ARM_BACKOFF_POWER = 0.20 * FILTER_ARM_EXTEND;
 
     DcMotor motorArm;         // this motor extends the arm
     DcMotor motorElbow;       // this motor drives the "elbow"
@@ -30,6 +33,8 @@ public class CompTeleOp extends OpMode
 	DcMotor motorTorso;       // this motor drives the "torso" rotation
 	Servo   servoClawLeft;    // this servo drives the left half of the claw
     Servo   servoClawRight;   // this servo drives the right half of the claw
+	TouchSensor sensor1;      // this sensor keeps the arm from extending too far
+	TouchSensor sensor2;      // this sensor keeps the arm from retracting too far
 
 	MediaPlayer mediaPlayer;
 
@@ -63,6 +68,9 @@ public class CompTeleOp extends OpMode
 
 		servoClawLeft.setPosition(.5);
 		servoClawRight.setPosition(.5);
+
+		sensor1 = hardwareMap.touchSensor.get("sensor_1");
+		sensor2 = hardwareMap.touchSensor.get("sensor_2");
 
 		mediaPlayer = new MediaPlayer();
 
@@ -102,9 +110,11 @@ public class CompTeleOp extends OpMode
 		double powerRightDrive = determinePowerFromInput(gamepad1.right_stick_y) * FILTER_DRIVE;
 		double powerRotateTorso = determinePowerFromInput(gamepad2.left_stick_x) * FILTER_ROTATE;
         double powerElbow = determinePowerFromInput(gamepad2.left_stick_y);
-		double powerArmExtend = determinePowerFromInput(gamepad2.left_trigger);
-        double powerArmRetract = determinePowerFromInput(gamepad2.right_trigger);
+		double powerArmExtend = determinePowerFromInput(gamepad2.left_trigger) * FILTER_ARM_EXTEND;
+        double powerArmRetract = determinePowerFromInput(gamepad2.right_trigger) * FILTER_ARM_EXTEND;
         double clawDirection = determinePowerFromInput(gamepad2.right_stick_y);
+		boolean armExtendedTooFar = (sensor1 == null) ? false : sensor1.isPressed();
+		boolean armRetractedTooFar = (sensor2 == null) ? false : sensor2.isPressed();
 
 		try
 		{
@@ -118,27 +128,48 @@ public class CompTeleOp extends OpMode
 			telemetry.addData("BOGUS", "HAPPENED");
 		}
 
-        if (powerArmExtend > 0 && powerArmRetract > 0)
-        {
-            motorArm.setPower(0);
-        }
-        else if (powerArmExtend > 0)
-        {
-            motorArm.setDirection(DcMotor.Direction.FORWARD);
-            motorArm.setPower(powerArmExtend);
-        }
-        else
-        {
-            motorArm.setDirection(DcMotor.Direction.REVERSE);
-            motorArm.setPower(powerArmRetract);
-        }
+		if (armExtendedTooFar || armRetractedTooFar)
+		{
+			if (armExtendedTooFar && armRetractedTooFar)
+			{
+				motorArm.setPower(0.0);
+			}
+			else
+			{
+				DcMotor.Direction armDirection = armExtendedTooFar ? DcMotor.Direction.REVERSE : DcMotor.Direction.FORWARD;
+				motorArm.setDirection(armDirection);
+				motorArm.setPower(ARM_BACKOFF_POWER);
+			}
+		}
+		else // (!armExtendedTooFar && !armRetractedTooFar)
+		{
+			if (powerArmExtend > 0.0 && powerArmRetract > 0.0)
+			{
+				motorArm.setPower(0);
+			}
+			else if (powerArmExtend > 0.0)
+			{
+				motorArm.setDirection(DcMotor.Direction.FORWARD);
+				motorArm.setPower(powerArmExtend);
+			}
+			else if (powerArmRetract > 0.0)
+			{
+				motorArm.setDirection(DcMotor.Direction.REVERSE);
+				motorArm.setPower(powerArmRetract);
+			}
+			else
+			{
+				// no buttons are pressed, so we do nothing.
+				motorArm.setPower(0);
+			}
+		}
 
 		clawDirection = Range.clip(clawDirection, .24, 1);
 
 		double rightClawPosition = clawDirection;
-		double leftClawPostion = (1-clawDirection);
+		double leftClawPostion = (1 - clawDirection);
 
-        motorElbow.setPower(powerElbow);
+		motorElbow.setPower(powerElbow);
         motorRightWheels.setPower(powerRightDrive);
 		motorLeftWheels.setPower(powerLeftDrive);
 		motorTorso.setPower(powerRotateTorso);
@@ -167,7 +198,7 @@ public class CompTeleOp extends OpMode
 	public void stop() {
 
 	}
-//fix me
+
 	/*
 	 * This method scales the joystick input so for low joystick values, the 
 	 * scaled value is less than linear.  This is to make it easier to drive
