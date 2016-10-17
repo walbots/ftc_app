@@ -26,10 +26,14 @@ public class SnoBotOpMode extends OpMode
 
     public void loop()
     {
+        /*
         double powerLeftDrive = determinePowerFromInput(gamepad1.left_stick_y);
         double powerRightDrive = determinePowerFromInput(gamepad1.right_stick_y);
         motorRightWheels.setPower(powerRightDrive);
         motorLeftWheels.setPower(powerLeftDrive);
+        */
+    motorLeftWheels.setPower(DetermineLeftWheelPowerFromSingleStickInput());
+    motorRightWheels.setPower(DetermineRightWheelPowerFromSingleStickInput());
     }
     double scaleInput(double dVal)  {
         double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.24,
@@ -56,12 +60,31 @@ public class SnoBotOpMode extends OpMode
             dScale = scaleArray[index];
         }
 
-        // return scaled value.
+        // return scaled value.)`
         return dScale;
     }
-
-
-
+    double DetermineLeftWheelPowerFromSingleStickInput()
+    {
+        double left_Power=0;
+        double x_value = gamepad1.right_stick_x;
+        double y_value = scaleInput(gamepad1.right_stick_y);
+        if(x_value<=0)
+        {
+            left_Power=y_value;
+        }
+        return left_Power;
+    }
+    double DetermineRightWheelPowerFromSingleStickInput()
+    {
+        double right_Power=0;
+        double x_value = gamepad1.right_stick_x;
+        double y_value = scaleInput(gamepad1.right_stick_y);
+        if(x_value<=0)
+        {
+            right_Power=y_value;
+        }
+        return right_Power;
+    }
     double determinePowerFromInput(double dVal)  {
         double power = dVal;
 
@@ -70,8 +93,7 @@ public class SnoBotOpMode extends OpMode
         // direction: left_stick_x ranges from -1 to 1, where -1 is full left
 
         power = Range.clip(power, -1, 1);
-        power =  (float)scaleInput(power);
+        power = (float)scaleInput(power);
 
-        return power;
-    }
+        }
 }
