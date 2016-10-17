@@ -26,12 +26,8 @@ public class SnoBotOpMode extends OpMode
 
     public void loop()
     {
-        
-        double powerLeftDrive = determinePowerFromInput(gamepad1.left_stick_y);
-        double powerRightDrive = determinePowerFromInput(gamepad1.right_stick_y);
-        motorRightWheels.setPower(powerRightDrive);
-        motorLeftWheels.setPower(powerLeftDrive);
 
+        
     motorLeftWheels.setPower(DetermineLeftWheelPowerFromSingleStickInput());
     motorRightWheels.setPower(DetermineRightWheelPowerFromSingleStickInput());
     }
