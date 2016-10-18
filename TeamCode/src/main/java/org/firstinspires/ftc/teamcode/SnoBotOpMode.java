@@ -20,14 +20,13 @@ public class SnoBotOpMode extends OpMode
         motorLeftWheels = hardwareMap.get(DcMotor.class, "motor_1");
         motorRightWheels = hardwareMap.get(DcMotor.class, "motor_2");
         motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
-
     }
     @Override
 
     public void loop()
     {
-
-        
+    telemetry.addData("y", String.format("%.2f", gamepad1.right_stick_y));
+    telemetry.addData("x", String.format("%.2f", gamepad1.right_stick_x));
     motorLeftWheels.setPower(DetermineLeftWheelPowerFromSingleStickInput());
     motorRightWheels.setPower(DetermineRightWheelPowerFromSingleStickInput());
     }
@@ -61,24 +60,27 @@ public class SnoBotOpMode extends OpMode
     }
     double DetermineLeftWheelPowerFromSingleStickInput()
     {
-        double left_Power=0;
-        double x_value = gamepad1.right_stick_x;
+        double left_Power=0.0;
+        float x_value = gamepad1.right_stick_x;
         double y_value = scaleInput(gamepad1.right_stick_y);
-        if(x_value<=0)
+        if(x_value<=0.0f)
         {
             left_Power=y_value;
         }
+        telemetry.addData("left", String.format("%.2f", left_Power));
+
         return left_Power;
     }
     double DetermineRightWheelPowerFromSingleStickInput()
     {
-        double right_Power=0;
-        double x_value = gamepad1.right_stick_x;
+        double right_Power=0.0;
+        float x_value = gamepad1.right_stick_x;
         double y_value = scaleInput(gamepad1.right_stick_y);
-        if(x_value<=0)
+        if(x_value>=0.0f)
         {
             right_Power=y_value;
         }
+        telemetry.addData("right", String.format("%.2f", right_Power));
         return right_Power;
     }
     double determinePowerFromInput(double dVal)  {
