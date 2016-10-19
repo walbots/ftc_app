@@ -63,7 +63,7 @@ public class SnoBotOpMode extends OpMode
         double left_Power=0.0;
         float x_value = gamepad1.right_stick_x;
         double y_value = scaleInput(gamepad1.right_stick_y);
-        if(x_value<=0.0f)
+        if(x_value>=0.0f)
         {
             left_Power=y_value;
         }
@@ -76,7 +76,7 @@ public class SnoBotOpMode extends OpMode
         double right_Power=0.0;
         float x_value = gamepad1.right_stick_x;
         double y_value = scaleInput(gamepad1.right_stick_y);
-        if(x_value>=0.0f)
+        if(x_value<=0.0f)
         {
             right_Power=y_value;
         }
