@@ -16,8 +16,8 @@ public class TwoChainzOpMode extends OpMode
 
     public void init()
     {
-        motorLeftWheels = hardwareMap.get(DcMotor.class, "motor_1");
-        motorRightWheels = hardwareMap.get(DcMotor.class, "motor_2");
+        motorLeftWheels = hardwareMap.get(DcMotor.class, "leftwheel");
+        motorRightWheels = hardwareMap.get(DcMotor.class, "rightwheel");
         motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
 
     }
