@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.drm.DrmStore;
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -25,12 +27,28 @@ public class SnoBotOpMode extends OpMode
 
     public void loop()
     {
-    telemetry.addData("y", String.format("%.2f", gamepad1.right_stick_y));
-    telemetry.addData("x", String.format("%.2f", gamepad1.right_stick_x));
-    motorLeftWheels.setPower(DetermineLeftWheelPowerFromSingleStickInput());
-    motorRightWheels.setPower(DetermineRightWheelPowerFromSingleStickInput());
+        if(gamepad1.dpad_up||gamepad1.dpad_down)
+        {
+            if(!motorLeftWheels.isBusy() && !motorRightWheels.isBusy())
+            {
+                motorLeftWheels.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                motorRightWheels.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                motorLeftWheels.setTargetPosition(1440);
+                motorRightWheels.setTargetPosition(1440);
+            }
+            //We have work to do here...
+
+        }
+        else
+        {
+            telemetry.addData("y", String.format("%.2f", gamepad1.right_stick_y));
+            telemetry.addData("x", String.format("%.2f", gamepad1.right_stick_x));
+            motorLeftWheels.setPower(DetermineLeftWheelPowerFromSingleStickInput());
+            motorRightWheels.setPower(DetermineRightWheelPowerFromSingleStickInput());
+        }
     }
-    double scaleInput(double dVal)  {
+    double scaleInput(double dVal)
+    {
         double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.24,
                 0.30, 0.36, 0.43, 0.50, 0.60, 0.72, 0.85, 1.00, 1.00 };
 
@@ -83,7 +101,8 @@ public class SnoBotOpMode extends OpMode
         telemetry.addData("right", String.format("%.2f", right_Power));
         return right_Power;
     }
-    double determinePowerFromInput(double dVal)  {
+    double determinePowerFromInput(double dVal)
+    {
         double power = dVal;
 
         // throttle: left_stick_y ranges from -1 to 1, where -1 is full up, and
