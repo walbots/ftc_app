@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.Range;
 
 /**
@@ -13,13 +14,24 @@ public class TwoChainzOpMode extends OpMode
 {
     DcMotor motorLeftWheels;
     DcMotor motorRightWheels;
+    DcMotor motorRotate;
+    DcMotor motorAltitude;
+    DcMotor motorLaunchLeft;
+    DcMotor motorLaunchRight;
+    double launchTime = 0f;
+    double coolTime = 0f;
+
 
     public void init()
     {
-        motorLeftWheels = hardwareMap.get(DcMotor.class, "leftwheel");
-        motorRightWheels = hardwareMap.get(DcMotor.class, "rightwheel");
+        motorLeftWheels = hardwareMap.get(DcMotor.class,"leftwheel");
+        motorRightWheels = hardwareMap.get(DcMotor.class,"rightwheel");
+        motorAltitude = hardwareMap.get(DcMotor.class,"altitude");
+        motorRotate = hardwareMap.get(DcMotor.class,"rotate");
+        motorLaunchLeft = hardwareMap.get(DcMotor.class,"launchleft");
+        motorLaunchRight = hardwareMap.get(DcMotor.class,"launchright");
         motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
-
+        motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
     }
     @Override
 
@@ -27,8 +39,32 @@ public class TwoChainzOpMode extends OpMode
     {
         double powerLeftDrive = determinePowerFromInput(gamepad1.left_stick_y);
         double powerRightDrive = determinePowerFromInput(gamepad1.right_stick_y);
+        double powerRotate = determinePowerFromInput(gamepad2. left_stick_x);
+        double powerAltitude = determinePowerFromInput(gamepad2.right_stick_y);
         motorRightWheels.setPower(powerRightDrive);
         motorLeftWheels.setPower(powerLeftDrive);
+        motorRotate.setPower(powerRotate);
+        motorAltitude.setPower(powerAltitude);
+
+        telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", powerLeftDrive, powerRightDrive));
+        telemetry.addData("arm", String.format("rotate: %.2f\taltitude: %.2f", powerRotate, powerAltitude));
+
+        if (gamepad2.right_bumper && coolTime <= time)
+        {
+            motorLaunchLeft.setPower(1f);
+            motorLaunchRight.setPower(1f);
+            launchTime = time + 1;
+            coolTime = 0f;
+        }
+
+        if (launchTime <= time)
+        {
+            launchTime = 0f;
+            motorLaunchLeft.setPower(0f);
+            motorLaunchRight.setPower(0f);
+            coolTime = time + 1;
+        }
+
     }
     double scaleInput(double dVal)  {
         double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.24,
