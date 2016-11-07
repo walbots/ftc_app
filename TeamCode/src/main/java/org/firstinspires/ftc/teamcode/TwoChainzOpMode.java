@@ -84,17 +84,17 @@ public class TwoChainzOpMode extends OpMode
 
         if (gamepad2.right_bumper && coolTime <= time)
         {
-            //motorLaunchLeft.setPower(1f);  // fire launch motor at full power
-            //motorLaunchRight.setPower(1f); // fire launch motor at full power
+            //motorLaunchLeft.setPower(1f);           // fire launch motor at full power
+            //motorLaunchRight.setPower(1f);          // fire launch motor at full power
             launchTime = time + INTERVAL_LAUNCHING; // set a launchTime to stop the launch motors after
-            coolTime = 0f;         // reset the coolTime for later use
+            coolTime = 0f;                          // reset the coolTime for later use
         }
 
         if (launchTime <= time)
         {
-            launchTime = 0f; // reset the launchTime for later use
-            //motorLaunchLeft.setPower(0f);  // turn off the launch motor
-            //motorLaunchRight.setPower(0f); // turn off the launch motor
+            launchTime = 0f;                    // reset the launchTime for later use
+            //motorLaunchLeft.setPower(0f);       // turn off the launch motor
+            //motorLaunchRight.setPower(0f);      // turn off the launch motor
             coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
         }
     }
