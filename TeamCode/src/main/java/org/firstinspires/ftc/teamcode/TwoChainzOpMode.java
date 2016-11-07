@@ -6,9 +6,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.Range;
 
-/**
- * Created by Yanfeng on 9/28/16.
- */
 @TeleOp(name="TwoChainz", group="Walbots")
 public class TwoChainzOpMode extends OpMode
 {
