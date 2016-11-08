@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name="TwoChainz", group="Walbots")
@@ -17,9 +18,12 @@ public class TwoChainzOpMode extends OpMode
     DcMotor motorRotate;
     DcMotor motorLaunchLeft;
     DcMotor motorLaunchRight;
+    Servo triggerServo;
 
     // timer variables
 
+    double triggerPosition;
+    double triggerStop;
     double coolTime;
     double launchTime;
 
@@ -27,11 +31,13 @@ public class TwoChainzOpMode extends OpMode
 
     static public double FILTER_ALTITUDE    = 0.5f;
     static public double FILTER_ROTATE      = 0.5f;
+    static public double TRIGGER_START      = 0.5f;
+    static public double TRIGGER_STOP       = 0.9f;
 
     // constants to use for intervals for timers
 
     static public double INTERVAL_COOLING   = 1f;
-    static public double INTERVAL_LAUNCHING = 1f;
+    static public double INTERVAL_LAUNCHING = 2f;
 
     @Override
     public void init()
@@ -42,9 +48,9 @@ public class TwoChainzOpMode extends OpMode
         motorRightWheels = hardwareMap.get(DcMotor.class, "rightwheel");
         motorAltitude    = hardwareMap.get(DcMotor.class, "altitude");
         motorRotate      = hardwareMap.get(DcMotor.class, "rotate");
-        //motorLaunchLeft  = hardwareMap.get(DcMotor.class, "launchleft");
-        //motorLaunchRight = hardwareMap.get(DcMotor.class, "launchright");
-
+        motorLaunchLeft  = hardwareMap.get(DcMotor.class, "launchleft");
+        motorLaunchRight = hardwareMap.get(DcMotor.class, "launchright");
+        triggerServo.setPosition(TRIGGER_START);
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
 
@@ -52,9 +58,9 @@ public class TwoChainzOpMode extends OpMode
         motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
 
         // reset the timers before their first use
-
-        coolTime   = 0f;
-        launchTime = 0f;
+        triggerPosition = 0f;
+        coolTime        = 0f;
+        launchTime      = 0f;
     }
 
     @Override
@@ -84,19 +90,23 @@ public class TwoChainzOpMode extends OpMode
 
         if (gamepad2.right_bumper && coolTime <= time)
         {
-            //motorLaunchLeft.setPower(1f);           // fire launch motor at full power
-            //motorLaunchRight.setPower(1f);          // fire launch motor at full power
+            motorLaunchLeft.setPower(1f);           // fire launch motor at full power
+            motorLaunchRight.setPower(1f);          // fire launch motor at full power
+
             launchTime = time + INTERVAL_LAUNCHING; // set a launchTime to stop the launch motors after
             coolTime = 0f;                          // reset the coolTime for later use
+            triggerServo.setPosition(TRIGGER_STOP);
         }
 
         if (launchTime <= time)
         {
             launchTime = 0f;                    // reset the launchTime for later use
-            //motorLaunchLeft.setPower(0f);       // turn off the launch motor
-            //motorLaunchRight.setPower(0f);      // turn off the launch motor
+            motorLaunchLeft.setPower(0f);       // turn off the launch motor
+            motorLaunchRight.setPower(0f);      // turn off the launch motor
             coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
+            triggerServo.setPosition(TRIGGER_START);
         }
+
     }
 
     double determinePowerFromInput(double dVal)
