@@ -18,19 +18,17 @@ public class TwoChainzOpMode extends OpMode
     DcMotor motorRotate;
     DcMotor motorLaunchLeft;
     DcMotor motorLaunchRight;
-    Servo triggerServo;
+    Servo   triggerServo;
 
     // timer variables
 
-    double triggerPosition;
-    double triggerStop;
     double coolTime;
     double launchTime;
 
     // constants to tweak certain movements
 
-    static public double FILTER_ALTITUDE    = 0.5f;
-    static public double FILTER_ROTATE      = 0.5f;
+    static public double FILTER_ALTITUDE    = 0.25f;
+    static public double FILTER_ROTATE      = 0.25f;
     static public double TRIGGER_START      = 0.5f;
     static public double TRIGGER_STOP       = 0.9f;
 
@@ -50,15 +48,17 @@ public class TwoChainzOpMode extends OpMode
         motorRotate      = hardwareMap.get(DcMotor.class, "rotate");
         motorLaunchLeft  = hardwareMap.get(DcMotor.class, "launchleft");
         motorLaunchRight = hardwareMap.get(DcMotor.class, "launchright");
-        triggerServo.setPosition(TRIGGER_START);
+        triggerServo     = hardwareMap.get(Servo.class,   "trigger");
+
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
 
-        //motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
+        motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
         motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
+        triggerServo.setPosition(TRIGGER_START);
 
         // reset the timers before their first use
-        triggerPosition = 0f;
+
         coolTime        = 0f;
         launchTime      = 0f;
     }
@@ -92,21 +92,21 @@ public class TwoChainzOpMode extends OpMode
         {
             motorLaunchLeft.setPower(1f);           // fire launch motor at full power
             motorLaunchRight.setPower(1f);          // fire launch motor at full power
-
+            triggerServo.setPosition(TRIGGER_STOP); // move the ball into the barrel
             launchTime = time + INTERVAL_LAUNCHING; // set a launchTime to stop the launch motors after
             coolTime = 0f;                          // reset the coolTime for later use
-            triggerServo.setPosition(TRIGGER_STOP);
         }
 
         if (launchTime <= time)
         {
-            launchTime = 0f;                    // reset the launchTime for later use
-            motorLaunchLeft.setPower(0f);       // turn off the launch motor
-            motorLaunchRight.setPower(0f);      // turn off the launch motor
-            coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
-            triggerServo.setPosition(TRIGGER_START);
+            triggerServo.setPosition(TRIGGER_START); // reset the trigger for next time
+            launchTime = 0f;                         // reset the launchTime for later use
+            motorLaunchLeft.setPower(0f);            // turn off the launch motor
+            motorLaunchRight.setPower(0f);           // turn off the launch motor
+            coolTime = time + INTERVAL_COOLING;      // set coolTime to prevent the launch motors from burning out from repeated use
         }
 
+        telemetry.addData("barrel", String.format("launch: %.2f\tcool: %.2f", launchTime, coolTime));
     }
 
     double determinePowerFromInput(double dVal)
