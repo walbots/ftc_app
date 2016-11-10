@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name="TwoChainz", group="Walbots")
@@ -17,20 +18,20 @@ public class TwoChainzOpMode extends OpMode
     DcMotor motorRotate;
     DcMotor motorLaunchLeft;
     DcMotor motorLaunchRight;
-
+    Servo   triggerServo;
     // timer variables
 
-    double coolTime;
+   // double coolTime;
     double launchTime;
-
     // constants to tweak certain movements
 
     static public double FILTER_ALTITUDE    = 0.5f;
     static public double FILTER_ROTATE      = 0.5f;
-
+    static public double TRIGGER_START      = 0.1f;
+    static public double TRIGGER_STOP       = 1f;
     // constants to use for intervals for timers
 
-    static public double INTERVAL_COOLING   = 1f;
+    //static public double INTERVAL_COOLING   = 1f;
     static public double INTERVAL_LAUNCHING = 1f;
 
     @Override
@@ -42,18 +43,19 @@ public class TwoChainzOpMode extends OpMode
         motorRightWheels = hardwareMap.get(DcMotor.class, "rightwheel");
         motorAltitude    = hardwareMap.get(DcMotor.class, "altitude");
         motorRotate      = hardwareMap.get(DcMotor.class, "rotate");
-        //motorLaunchLeft  = hardwareMap.get(DcMotor.class, "launchleft");
-        //motorLaunchRight = hardwareMap.get(DcMotor.class, "launchright");
+        triggerServo     = hardwareMap.get(Servo.class,   "trigger");
+        motorLaunchLeft  = hardwareMap.get(DcMotor.class, "launchleft");
+        motorLaunchRight = hardwareMap.get(DcMotor.class, "launchright");
 
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
 
-        //motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
+        motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
         motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
 
         // reset the timers before their first use
-
-        coolTime   = 0f;
+        triggerServo.setPosition(TRIGGER_START);
+      //  coolTime   = 0f;
         launchTime = 0f;
     }
 
@@ -78,16 +80,16 @@ public class TwoChainzOpMode extends OpMode
 
         telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", powerLeftDrive, powerRightDrive));
         telemetry.addData("arm", String.format("rotate: %.2f\taltitude: %.2f", powerRotate, powerAltitude));
-
         // if the launch motors aren't cooling off,
         // trigger the launch motors when gamepad2.right_bumper is pressed
 
-        if (gamepad2.right_bumper && coolTime <= time)
+        if (gamepad2.right_bumper)// && coolTime <= time)
         {
             //motorLaunchLeft.setPower(1f);           // fire launch motor at full power
             //motorLaunchRight.setPower(1f);          // fire launch motor at full power
             launchTime = time + INTERVAL_LAUNCHING; // set a launchTime to stop the launch motors after
-            coolTime = 0f;                          // reset the coolTime for later use
+         //   coolTime = 0f;                          // reset the coolTime for later use
+            triggerServo.setPosition(TRIGGER_STOP);
         }
 
         if (launchTime <= time)
@@ -95,7 +97,8 @@ public class TwoChainzOpMode extends OpMode
             launchTime = 0f;                    // reset the launchTime for later use
             //motorLaunchLeft.setPower(0f);       // turn off the launch motor
             //motorLaunchRight.setPower(0f);      // turn off the launch motor
-            coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
+           // coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
+            triggerServo.setPosition(TRIGGER_START);
         }
     }
 
