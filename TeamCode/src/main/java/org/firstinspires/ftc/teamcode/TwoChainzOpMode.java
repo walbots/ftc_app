@@ -20,20 +20,21 @@ public class TwoChainzOpMode extends OpMode
     DcMotor motorLaunchRight;
     Servo   triggerServo;
     // timer variables
-
-   // double coolTime;
+    //timer for the servo wait
+    double servoWaitTime;
+    // double coolTime;
     double launchTime;
     // constants to tweak certain movements
 
-    static public double FILTER_ALTITUDE    = 0.5f;
-    static public double FILTER_ROTATE      = 0.5f;
+    static public double FILTER_ALTITUDE    = 0.25f;
+    static public double FILTER_ROTATE      = 0.25f;
     static public double TRIGGER_START      = 0.1f;
     static public double TRIGGER_STOP       = 1f;
     // constants to use for intervals for timers
 
     //static public double INTERVAL_COOLING   = 1f;
-    static public double INTERVAL_LAUNCHING = 1f;
-
+    static public double INTERVAL_LAUNCHING   = 1f;
+    static public double INTERVAL_TRIGGER     = 0.5f;
     @Override
     public void init()
     {
@@ -51,12 +52,13 @@ public class TwoChainzOpMode extends OpMode
         // to compensate for the motors needing to rotate in concert with their partner motors
 
         motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
-        motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
+        //motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
 
         // reset the timers before their first use
         triggerServo.setPosition(TRIGGER_START);
-      //  coolTime   = 0f;
-        launchTime = 0f;
+        //  coolTime    = 0f;
+        launchTime    = 0f;
+        servoWaitTime = 0f;
     }
 
     @Override
@@ -64,18 +66,16 @@ public class TwoChainzOpMode extends OpMode
     {
         // compute the power from the appropriate gamepad input
 
-        double powerLeftDrive  = determinePowerFromInput(gamepad1.left_stick_y);
-        double powerRightDrive = determinePowerFromInput(gamepad1.right_stick_y);
-        double powerRotate     = determinePowerFromInput(gamepad2. left_stick_x) * FILTER_ROTATE;
-        double powerAltitude   = determinePowerFromInput(gamepad2.right_stick_y) * FILTER_ALTITUDE;
-
+        double powerLeftDrive   = determinePowerFromInput(gamepad1.left_stick_y);
+        double powerRightDrive  = determinePowerFromInput(gamepad1.right_stick_y);
+        double powerRotate      = determinePowerFromInput(gamepad2. left_stick_x) * FILTER_ROTATE;
+        double powerAltitude    = determinePowerFromInput(gamepad2.right_stick_y) * FILTER_ALTITUDE;
         // apply the computer power
 
         motorLeftWheels.setPower(powerLeftDrive);
         motorRightWheels.setPower(powerRightDrive);
         motorRotate.setPower(powerRotate);
         motorAltitude.setPower(powerAltitude);
-
         // print some helpful diagnostic messages to the driver controller app
 
         telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", powerLeftDrive, powerRightDrive));
@@ -85,21 +85,34 @@ public class TwoChainzOpMode extends OpMode
 
         if (gamepad2.right_bumper)// && coolTime <= time)
         {
-            //motorLaunchLeft.setPower(1f);           // fire launch motor at full power
-            //motorLaunchRight.setPower(1f);          // fire launch motor at full power
+            motorLaunchLeft.setPower(1f);           // fire launch motor at full power
+            motorLaunchRight.setPower(1f);          // fire launch motor at full power
             launchTime = time + INTERVAL_LAUNCHING; // set a launchTime to stop the launch motors after
-         //   coolTime = 0f;                          // reset the coolTime for later use
-            triggerServo.setPosition(TRIGGER_STOP);
+            //   coolTime = 0f;                          // reset the coolTime for later use
+            servoWaitTime = time + INTERVAL_TRIGGER;
+            //we gave the motors a chance to power up
         }
 
-        if (launchTime <= time)
+        // If servoWaitTime is enabled (>0) and servoWaitTime has expired, move the servo
+        // to trigger the ball in the launcher
+        if (servoWaitTime <= time && servoWaitTime > 0f)
+        {
+            triggerServo.setPosition(TRIGGER_STOP);
+            servoWaitTime = 0f;
+        }
+
+        if (launchTime <= time && launchTime > 0f)
         {
             launchTime = 0f;                    // reset the launchTime for later use
-            //motorLaunchLeft.setPower(0f);       // turn off the launch motor
-            //motorLaunchRight.setPower(0f);      // turn off the launch motor
-           // coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
+            motorLaunchLeft.setPower(0f);       // turn off the launch motor
+            motorLaunchRight.setPower(0f);      // turn off the launch motor
+            // coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
             triggerServo.setPosition(TRIGGER_START);
+
         }
+
+        //telemetry.addData("barrel", String.format("launch: %.2f\tcool: %.2f", launchTime, coolTime));
+        telemetry.addData("barrel", String.format("launch: %.2f", launchTime));
     }
 
     double determinePowerFromInput(double dVal)
@@ -151,3 +164,4 @@ public class TwoChainzOpMode extends OpMode
         return dScale;
     }
 }
+
