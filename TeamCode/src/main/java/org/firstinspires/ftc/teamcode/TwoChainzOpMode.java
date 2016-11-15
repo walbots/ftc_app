@@ -18,7 +18,11 @@ public class TwoChainzOpMode extends OpMode
     DcMotor motorRotate;
     DcMotor motorLaunchLeft;
     DcMotor motorLaunchRight;
+
     Servo   triggerServo;
+    Servo   clawServoLeft;
+    Servo   clawServoRight;
+
     // timer variables
     //timer for the servo wait
     double servoWaitTime;
@@ -33,7 +37,7 @@ public class TwoChainzOpMode extends OpMode
     // constants to use for intervals for timers
 
     //static public double INTERVAL_COOLING   = 1f;
-    static public double INTERVAL_LAUNCHING   = 1f;
+    static public double INTERVAL_LAUNCHING   = 2f;
     static public double INTERVAL_TRIGGER     = 0.5f;
     @Override
     public void init()
@@ -45,6 +49,8 @@ public class TwoChainzOpMode extends OpMode
         motorAltitude    = hardwareMap.get(DcMotor.class, "altitude");
         motorRotate      = hardwareMap.get(DcMotor.class, "rotate");
         triggerServo     = hardwareMap.get(Servo.class,   "trigger");
+        clawServoLeft    = hardwareMap.get(Servo.class,   "clawleft");
+        clawServoRight   = hardwareMap.get(Servo.class,   "clawright");
         motorLaunchLeft  = hardwareMap.get(DcMotor.class, "launchleft");
         motorLaunchRight = hardwareMap.get(DcMotor.class, "launchright");
 
