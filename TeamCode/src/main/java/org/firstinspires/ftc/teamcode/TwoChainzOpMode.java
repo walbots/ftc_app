@@ -29,6 +29,8 @@ public class TwoChainzOpMode extends OpMode
     // double coolTime;
     double launchTime;
     // constants to tweak certain movements
+    double loadTime;
+    double grabTime;
 
     static public double FILTER_ALTITUDE    = 0.25f;
     static public double FILTER_ROTATE      = 0.25f;
@@ -39,6 +41,10 @@ public class TwoChainzOpMode extends OpMode
     //static public double INTERVAL_COOLING   = 1f;
     static public double INTERVAL_LAUNCHING   = 2f;
     static public double INTERVAL_TRIGGER     = 0.5f;
+    static public double PICK_UP              = 1f;
+    static public double LOAD                 = 0.6f;
+    static public double INTERVAL_PICKUP      = 2f;
+    static public double INTERVAL_LOAD        = 2f;
     @Override
     public void init()
     {
@@ -59,12 +65,14 @@ public class TwoChainzOpMode extends OpMode
 
         motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
         //motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
-
+        clawServoRight.setDirection(Servo.Direction.REVERSE);
         // reset the timers before their first use
         triggerServo.setPosition(TRIGGER_START);
         //  coolTime    = 0f;
         launchTime    = 0f;
         servoWaitTime = 0f;
+        grabTime      = 0f;
+        loadTime      = 0f;
     }
 
     @Override
@@ -116,9 +124,29 @@ public class TwoChainzOpMode extends OpMode
             triggerServo.setPosition(TRIGGER_START);
 
         }
+        if (gamepad2.left_bumper && grabTime == 0f && loadTime == 0f)
+        {
+            clawServoRight.setPosition(PICK_UP);
+            clawServoRight.setPosition(PICK_UP);
+            grabTime = time + INTERVAL_PICKUP;
+        }
+
+        if (grabTime <= time && grabTime > 0f)
+        {
+            grabTime = 0f;
+            clawServoRight.setPosition(LOAD);
+            clawServoLeft.setPosition(LOAD);
+            loadTime = time + INTERVAL_LOAD;
+        }
+        if (loadTime <= time && loadTime > 0f)
+        {
+            loadTime = 0f;
+            clawServoRight.setPosition(PICK_UP);
+            clawServoLeft.setPosition(PICK_UP); 
+        }
 
         //telemetry.addData("barrel", String.format("launch: %.2f\tcool: %.2f", launchTime, coolTime));
-        telemetry.addData("barrel", String.format("launch: %.2f", launchTime));
+        telemetry.addData("barrel   ", String.format("launch: %.2f", launchTime));
     }
 
     double determinePowerFromInput(double dVal)
