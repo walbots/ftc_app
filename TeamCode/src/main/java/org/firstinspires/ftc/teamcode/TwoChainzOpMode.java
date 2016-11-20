@@ -204,10 +204,12 @@ public class TwoChainzOpMode extends OpMode
         if (loadTime <= time && loadTime > 0f)
         {
             loadTime = 0f;
-            motorLaunchLeft.setPower(REVERSE_POWER);
-            motorLaunchRight.setPower(REVERSE_POWER);
             clawServoLeft.setPosition(PICK_UP);
             clawServoRight.setPosition(PICK_UP);
+            motorAltitude.setTargetPosition (ALTITUDE_UP);
+            motorAltitude.setPower(ENCODER_POWER);
+            motorLaunchLeft.setPower(REVERSE_POWER);
+            motorLaunchRight.setPower(REVERSE_POWER);
             triggerServo.setPosition(TRIGGER_START);
             reverseTime = time + INTERVAL_REVERSING;
         }
@@ -217,8 +219,9 @@ public class TwoChainzOpMode extends OpMode
             reverseTime = 0f;
             motorLaunchLeft.setPower(0f);
             motorLaunchRight.setPower(0f);
-            motorAltitude.setPower(ENCODER_POWER);
-            motorAltitude.setTargetPosition (ALTITUDE_UP);
+            clawServoLeft.setPosition(STOW);
+            clawServoRight.setPosition(STOW);
+            motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             barrelReadying = true;
         }
 
