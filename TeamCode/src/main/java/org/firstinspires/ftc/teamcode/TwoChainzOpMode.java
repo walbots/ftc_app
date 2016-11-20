@@ -47,6 +47,7 @@ public class TwoChainzOpMode extends OpMode
     static public final int    ALTITUDE_DOWN        = 1200;
     static public final double ENCODER_POWER        = 0.75f;
     static public final double REVERSE_POWER        = -0.5f;
+    static public final double CLAW_INCREMENT      = 0.1f;
 
     // constants to use for timer intervals
 
@@ -82,6 +83,8 @@ public class TwoChainzOpMode extends OpMode
         //motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
         clawServoRight.setDirection(Servo.Direction.REVERSE);
         // reset the timers & state variables before their first use
+        clawServoLeft.setPosition(STOW);
+        clawServoRight.setPosition(STOW);
         triggerServo.setPosition(TRIGGER_START);
         //  coolTime    = 0f;
         launchTime      = 0f;
@@ -225,26 +228,48 @@ public class TwoChainzOpMode extends OpMode
             barrelReadying = true;
         }
 
+        if (gamepad2.right_trigger > 0f)
+        {
+            clawServoRight.setPosition(Range.clip(clawServoRight.getPosition() + CLAW_INCREMENT, 0.0f, 1.0f));
+            clawServoLeft.setPosition(Range.clip(clawServoLeft.getPosition() + CLAW_INCREMENT, 0.0f ,1.0f));
+        }
+
+        if (gamepad2.left_trigger > 0f)
+        {
+            clawServoRight.setPosition(Range.clip(clawServoRight.getPosition() - CLAW_INCREMENT, 0.0f, 1.0f));
+            clawServoLeft.setPosition(Range.clip(clawServoLeft.getPosition() - CLAW_INCREMENT, 0.0f, 1.0f));
+        }
+
+        if (gamepad2.x)
+        {
+            motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
+
         if (barrelRaising)
         {
             loadState = "barrelRaising";
         }
+
         else if (grabTime > 0f)
         {
             loadState = "grabTime";
         }
+
         else if (barrelLowering)
         {
             loadState = "barrelLowering";
         }
+
         else if (loadTime > 0f)
         {
             loadState = "loadTime";
         }
+
         else if (reverseTime > 0f)
         {
             loadState = "reverseTime";
         }
+
         else if (barrelReadying)
         {
             loadState = "barrelReadying";
