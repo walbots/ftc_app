@@ -10,35 +10,42 @@ import com.qualcomm.robotcore.util.Range;
 public class SnoBotOpMode extends OpMode
 {
     // software-hardware proxy object variables
+
     DcMotor motorBell;
     DcMotor motorLeftWheels;
     DcMotor motorRightWheels;
+
     // timer variables
-    double bellTime;
-    double wheelTime;
+
     double bellStopTime;
+    double wheelTime;
+
     // constants to use for intervals for timers
-    static public final double BELL_POWER       = 1f;
+
+    static public final double AUTO_POWER       = 0.5f;
+    static public final double BELL_POWER       = 0.5f;
+    static public final double STOP             = 0f;
     static public final double INTERVAL_RUNNING = 1f;
-    static public final double INTERVAL_RINGING = 1f;
-    static public final double BELL_STOP        = 0f;
+    static public final double INTERVAL_RINGING = 0.5f;
+
     @Override
     public void init()
     {
-        // grab references to all of the sofdtware-hardware proxy objects
+        // grab references to all of the software-hardware proxy objects
 
+        motorBell        = hardwareMap.get(DcMotor.class, "motor_bell");
         motorLeftWheels  = hardwareMap.get(DcMotor.class, "motor_1");
         motorRightWheels = hardwareMap.get(DcMotor.class, "motor_2");
-        motorBell        = hardwareMap.get(DcMotor.class, "motor_bell");
+
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
 
         motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
 
         // reset the timers before their first use
-        bellTime    = 0f;
-        wheelTime   = 0f;
-        bellStopTime= 0f;
+
+        bellStopTime = 0f;
+        wheelTime    = 0f;
     }
 
     @Override
@@ -46,12 +53,12 @@ public class SnoBotOpMode extends OpMode
     {
         if (gamepad1.dpad_up || gamepad1.dpad_down)
         {
-            if (wheelTime == 0f)
+            if (wheelTime == 0f)                       // ignore if already going
             {
-                wheelTime = time + INTERVAL_RUNNING; // set a wheelTime to stop the wheel motors after
+                motorLeftWheels.setPower(AUTO_POWER);  // start the motor
+                motorRightWheels.setPower(AUTO_POWER); // start the motor
 
-                motorLeftWheels.setPower(0.5f);  // start the motor
-                motorRightWheels.setPower(0.5f); // start the motor
+                wheelTime = time + INTERVAL_RUNNING;   // set a timer to stop the motors after
             }
         }
 
@@ -59,26 +66,30 @@ public class SnoBotOpMode extends OpMode
 
         if (gamepad2.y)
         {
-            motorBell.setPower(BELL_POWER);
-            bellStopTime = time + INTERVAL_RINGING;
+            if (bellStopTime == 0f)                     // ignore if already going
+            {
+                motorBell.setPower(BELL_POWER);         // start the motor
+                bellStopTime = time + INTERVAL_RINGING; // set a timer to stop the motor after
+            }
         }
 
-        if (bellStopTime <= time && bellStopTime > 0f)
+        if (bellStopTime > 0f && time >= bellStopTime)
         {
-            motorBell.setPower(BELL_STOP);
-            bellStopTime = 0f;
+            bellStopTime = 0f; // reset the timer for later use
+            motorBell.setPower(STOP);
         }
 
-        if (wheelTime >= 0f && time >= wheelTime)
+        if (wheelTime > 0f && time >= wheelTime)
         {
-            wheelTime = 0f; // reset the wheelTime for later use
+            wheelTime = 0f; // reset the timer for later use
 
-            motorLeftWheels.setPower(0f);  // stop the motor
-            motorRightWheels.setPower(0f); // stop the motor
+            motorLeftWheels.setPower(STOP);
+            motorRightWheels.setPower(STOP);
         }
 
         // print some helpful diagnostic messages to the driver controller app
 
+        telemetry.addData("ringing", String.format("%b", gamepad2.y));
         telemetry.addData("y", String.format("%.2f", gamepad1.right_stick_y));
         telemetry.addData("x", String.format("%.2f", gamepad1.right_stick_x));
 
