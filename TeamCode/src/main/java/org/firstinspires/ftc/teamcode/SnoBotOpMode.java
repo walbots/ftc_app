@@ -3,41 +3,42 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name="Snobot", group="Walbots")
 public class SnoBotOpMode extends OpMode
 {
     // software-hardware proxy object variables
-
+    DcMotor motorBell;
     DcMotor motorLeftWheels;
     DcMotor motorRightWheels;
-
     // timer variables
-
+    double bellTime;
     double wheelTime;
-
+    double bellStopTime;
     // constants to use for intervals for timers
-
-    static public double INTERVAL_RUNNING = 1f;
-
-
+    static public final double BELL_POWER       = 1f;
+    static public final double INTERVAL_RUNNING = 1f;
+    static public final double INTERVAL_RINGING = 1f;
+    static public final double BELL_STOP        = 0f;
     @Override
     public void init()
     {
-        // grab references to all of the software-hardware proxy objects
+        // grab references to all of the sofdtware-hardware proxy objects
 
         motorLeftWheels  = hardwareMap.get(DcMotor.class, "motor_1");
         motorRightWheels = hardwareMap.get(DcMotor.class, "motor_2");
-
+        motorBell        = hardwareMap.get(DcMotor.class, "motor_bell");
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
 
         motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
 
         // reset the timers before their first use
-
-        wheelTime = 0f;
+        bellTime    = 0f;
+        wheelTime   = 0f;
+        bellStopTime= 0f;
     }
 
     @Override
@@ -55,6 +56,18 @@ public class SnoBotOpMode extends OpMode
         }
 
         // if the wheelTime timer is set and has expired, stop the motors and clear the timer
+
+        if (gamepad2.y)
+        {
+            motorBell.setPower(BELL_POWER);
+            bellStopTime = time + INTERVAL_RINGING;
+        }
+
+        if (bellStopTime <= time && bellStopTime > 0f)
+        {
+            motorBell.setPower(BELL_STOP);
+            bellStopTime = 0f;
+        }
 
         if (wheelTime >= 0f && time >= wheelTime)
         {
