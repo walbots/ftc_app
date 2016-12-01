@@ -36,8 +36,8 @@ public class TwoChainzAutonomousOpMode extends OpMode
     static public final double TRIGGER_START        = 0.1f;
     static public final double TRIGGER_STOP         = 1f;
     static public final double STOW                 = 0f;
-    static public final int    ALTITUDE_FIRE        = -1500;
-    static public final int    ALTITUDE_UP          = -200;
+    static public final int    ALTITUDE_FIRE        = -15575;
+    static public final int    ALTITUDE_UP          = 100;
     static public final double AUTO_DRIVE_POWER     = -1f;
 
     // constants to use for timer intervals
