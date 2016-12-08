@@ -24,6 +24,7 @@ public class SnoBotOpMode extends OpMode
 
     static public final double AUTO_POWER       = 0.5f;
     static public final double BELL_POWER       = 0.5f;
+    static public final double DRIVE_FILTER     = 0.5f; // slow down the robot
     static public final double STOP             = 0f;
     static public final double INTERVAL_RUNNING = 1f;
     static public final double INTERVAL_RINGING = 0.5f;
@@ -51,52 +52,62 @@ public class SnoBotOpMode extends OpMode
     @Override
     public void loop()
     {
-        if (gamepad1.dpad_up || gamepad1.dpad_down)
+        if (gamepad2.b) // emergency stop
         {
-            if (wheelTime == 0f)                       // ignore if already going
+            motorBell.setPower(0f);
+            motorLeftWheels.setPower(0f);
+            motorRightWheels.setPower(0f);
+            telemetry.clearAll();
+        }
+        else
+        {
+            if (gamepad1.dpad_up || gamepad1.dpad_down)
             {
-                motorLeftWheels.setPower(AUTO_POWER);  // start the motor
-                motorRightWheels.setPower(AUTO_POWER); // start the motor
+                if (wheelTime == 0f)                       // ignore if already going
+                {
+                    motorLeftWheels.setPower(AUTO_POWER);  // start the motor
+                    motorRightWheels.setPower(AUTO_POWER); // start the motor
 
-                wheelTime = time + INTERVAL_RUNNING;   // set a timer to stop the motors after
+                    wheelTime = time + INTERVAL_RUNNING;   // set a timer to stop the motors after
+                }
             }
-        }
 
-        // if the wheelTime timer is set and has expired, stop the motors and clear the timer
+            // if the wheelTime timer is set and has expired, stop the motors and clear the timer
 
-        if (gamepad2.y)
-        {
-            if (bellStopTime == 0f)                     // ignore if already going
+            if (gamepad1.y)
             {
-                motorBell.setPower(BELL_POWER);         // start the motor
-                bellStopTime = time + INTERVAL_RINGING; // set a timer to stop the motor after
+                if (bellStopTime == 0f)                     // ignore if already going
+                {
+                    motorBell.setPower(BELL_POWER);         // start the motor
+                    bellStopTime = time + INTERVAL_RINGING; // set a timer to stop the motor after
+                }
             }
+
+            if (bellStopTime > 0f && time >= bellStopTime)
+            {
+                bellStopTime = 0f; // reset the timer for later use
+                motorBell.setPower(STOP);
+            }
+
+            if (wheelTime > 0f && time >= wheelTime)
+            {
+                wheelTime = 0f; // reset the timer for later use
+
+                motorLeftWheels.setPower(STOP);
+                motorRightWheels.setPower(STOP);
+            }
+
+            // print some helpful diagnostic messages to the driver controller app
+
+            telemetry.addData("ringing", String.format("%b", gamepad1.y));
+            telemetry.addData("y", String.format("%.2f", gamepad1.right_stick_y));
+            telemetry.addData("x", String.format("%.2f", gamepad1.right_stick_x));
+
+            // drive the wheel motors from a single stick
+
+            motorLeftWheels.setPower(determineLeftWheelPowerFromSingleStickInput());
+            motorRightWheels.setPower(determineRightWheelPowerFromSingleStickInput());
         }
-
-        if (bellStopTime > 0f && time >= bellStopTime)
-        {
-            bellStopTime = 0f; // reset the timer for later use
-            motorBell.setPower(STOP);
-        }
-
-        if (wheelTime > 0f && time >= wheelTime)
-        {
-            wheelTime = 0f; // reset the timer for later use
-
-            motorLeftWheels.setPower(STOP);
-            motorRightWheels.setPower(STOP);
-        }
-
-        // print some helpful diagnostic messages to the driver controller app
-
-        telemetry.addData("ringing", String.format("%b", gamepad2.y));
-        telemetry.addData("y", String.format("%.2f", gamepad1.right_stick_y));
-        telemetry.addData("x", String.format("%.2f", gamepad1.right_stick_x));
-
-        // drive the wheel motors from a single stick
-
-        motorLeftWheels.setPower(determineLeftWheelPowerFromSingleStickInput());
-        motorRightWheels.setPower(determineRightWheelPowerFromSingleStickInput());
     }
 
     double determineLeftWheelPowerFromSingleStickInput()
@@ -140,6 +151,8 @@ public class SnoBotOpMode extends OpMode
 
         power = Range.clip(power, -1, 1);
         power = (float)scaleInput(power);
+
+        power = power * DRIVE_FILTER;
 
         return power;
     }
