@@ -6,8 +6,10 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
 
-@Autonomous(name="Snobot", group="Walbots")
-public class SnoBotAutonomousOpMode extends OpMode
+import org.lasarobotics.vision.opmode.TestableVisionOpMode;
+
+@Autonomous(name="SnobotAuto", group="Walbots")
+public class SnoBotAutonomousOpMode extends TestableVisionOpMode
 {
     // software-hardware proxy object variables
 
@@ -52,7 +54,7 @@ public class SnoBotAutonomousOpMode extends OpMode
     @Override
     public void loop()
     {
-        if ()
+        //FIXME if ()
         {
             motorLeftWheels.setPower(0f);
             motorRightWheels.setPower(0f);
