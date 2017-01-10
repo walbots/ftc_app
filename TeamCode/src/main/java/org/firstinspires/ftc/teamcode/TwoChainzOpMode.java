@@ -2,8 +2,8 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
@@ -19,27 +19,28 @@ public class TwoChainzOpMode extends OpMode
     DcMotor motorLaunchLeft;
     DcMotor motorLaunchRight;
 
-    Servo   triggerServo;
+    CRServo triggerServo;
     Servo   clawServoLeft;
     Servo   clawServoRight;
 
     // timer & state variables
-    double  servoWaitTime;
+
     // double    coolTime;
     double  launchTime;
     double  reverseTime;
     double  loadTime;
     double  grabTime;
+    double  triggerMoveTime;
     boolean barrelRaising;
     boolean barrelLowering;
     boolean barrelReadying;
+    int     triggerPosition; // values: 0 start position (2 balls loaded), 1 mid position (1 ball loaded), 2 stop position (all fired), -1 (resetting to start position)
 
     // constants to tweak certain movements
 
-    static public final double FILTER_ALTITUDE    = 0.25f;
-    static public final double FILTER_ROTATE      = 0.25f;
-    static public final double TRIGGER_START      = 0.1f;
-    static public final double TRIGGER_STOP       = 1f;
+    static public final double LAUNCH_POWER         = 0.5f;
+    static public final double FILTER_ALTITUDE      = 0.25f;
+    static public final double FILTER_ROTATE        = 0.25f;
     static public final double PICK_UP              = 1f;
     static public final double LOAD                 = 0.3f;
     static public final double STOW                 = 0f;
@@ -47,13 +48,14 @@ public class TwoChainzOpMode extends OpMode
     static public final int    ALTITUDE_DOWN        = 1200;
     static public final double ENCODER_POWER        = 0.75f;
     static public final double REVERSE_POWER        = -0.5f;
-    static public final double CLAW_INCREMENT      = 0.1f;
+    static public final double CLAW_INCREMENT       = 0.1f;
+    static public final double TRIGGER_POWER        = 0.5f;
 
     // constants to use for timer intervals
 
     //static public double INTERVAL_COOLING   = 1f;
     static public final double INTERVAL_LAUNCHING   = 2f;
-    static public final double INTERVAL_TRIGGER     = 0.5f;
+    static public final double INTERVAL_TRIGGER     = 1f;
     static public final double INTERVAL_REVERSING   = 1f;
     static public final double INTERVAL_PICKUP      = 1f;
     static public final double INTERVAL_LOAD        = 1f;
@@ -67,7 +69,7 @@ public class TwoChainzOpMode extends OpMode
         motorRightWheels = hardwareMap.get(DcMotor.class, "rightwheel");
         motorAltitude    = hardwareMap.get(DcMotor.class, "altitude");
         motorRotate      = hardwareMap.get(DcMotor.class, "rotate");
-        triggerServo     = hardwareMap.get(Servo.class,   "trigger");
+        triggerServo     = hardwareMap.get(CRServo.class, "trigger");
         clawServoLeft    = hardwareMap.get(Servo.class,   "clawleft");
         clawServoRight   = hardwareMap.get(Servo.class,   "clawright");
         motorLaunchLeft  = hardwareMap.get(DcMotor.class, "launchleft");
@@ -85,16 +87,17 @@ public class TwoChainzOpMode extends OpMode
         // reset the timers & state variables before their first use
         clawServoLeft.setPosition(STOW);
         clawServoRight.setPosition(STOW);
-        triggerServo.setPosition(TRIGGER_START);
+        triggerServo.setPower(0f);
         //  coolTime    = 0f;
         launchTime      = 0f;
-        servoWaitTime   = 0f;
         grabTime        = 0f;
         loadTime        = 0f;
         reverseTime     = 0f;
         barrelRaising   = false;
         barrelReadying  = false;
         barrelLowering  = false;
+        triggerMoveTime = 0f;
+        triggerPosition = 0;
     }
 
     @Override
@@ -144,21 +147,31 @@ public class TwoChainzOpMode extends OpMode
 
         if (gamepad2.right_bumper)// && coolTime <= time)
         {
-            motorLaunchLeft.setPower(1f);           // fire launch motor at full power
-            motorLaunchRight.setPower(1f);          // fire launch motor at full power
-            launchTime = time + INTERVAL_LAUNCHING; // set a launchTime to stop the launch motors after
+            motorLaunchLeft.setPower(LAUNCH_POWER);           // fire launch motor at full power
+            motorLaunchRight.setPower(LAUNCH_POWER);          // fire launch motor at full power
+            // set a launchTime to stop the launch motors after
             //   coolTime = 0f;                          // reset the coolTime for later use
-            servoWaitTime = time + INTERVAL_TRIGGER;
+            triggerMoveTime = time + INTERVAL_TRIGGER;
+            triggerServo.setPower(TRIGGER_POWER);
             //we gave the motors a chance to power up
         }
 
         // If servoWaitTime is enabled (>0) and servoWaitTime has expired, move the servo
         // to trigger the ball in the launcher
 
-        if (servoWaitTime <= time && servoWaitTime > 0f)
+
+        if (triggerMoveTime <= time && triggerMoveTime > 0f)
         {
-            triggerServo.setPosition(TRIGGER_STOP);
-            servoWaitTime = 0f;
+            triggerMoveTime = 0;
+            triggerServo.setPower(0f);
+            triggerPosition++;
+        }
+
+        if (triggerPosition == 2)
+        {
+            triggerPosition = -1;
+            triggerServo.setPower(-TRIGGER_POWER);
+            triggerMoveTime = time + 2*INTERVAL_TRIGGER;
         }
 
         if (launchTime <= time && launchTime > 0f)
@@ -167,7 +180,6 @@ public class TwoChainzOpMode extends OpMode
             motorLaunchLeft.setPower(0f);       // turn off the launch motor
             motorLaunchRight.setPower(0f);      // turn off the launch motor
             // coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
-            triggerServo.setPosition(TRIGGER_START);
         }
 
         if (gamepad2.left_bumper)
@@ -178,7 +190,7 @@ public class TwoChainzOpMode extends OpMode
             barrelRaising = true;
         }
 
-        if(!motorAltitude.isBusy() && barrelRaising)
+        if (!motorAltitude.isBusy() && barrelRaising)
         {
             barrelRaising = false;
             motorAltitude.setPower(0f);
@@ -195,7 +207,7 @@ public class TwoChainzOpMode extends OpMode
             barrelLowering = true;
         }
 
-        if(!motorAltitude.isBusy() && barrelLowering)
+        if (!motorAltitude.isBusy() && barrelLowering)
         {
             barrelLowering = false;
             motorAltitude.setPower(0f);
@@ -213,7 +225,6 @@ public class TwoChainzOpMode extends OpMode
             motorAltitude.setPower(ENCODER_POWER);
             motorLaunchLeft.setPower(REVERSE_POWER);
             motorLaunchRight.setPower(REVERSE_POWER);
-            triggerServo.setPosition(TRIGGER_START);
             reverseTime = time + INTERVAL_REVERSING;
         }
 
@@ -280,6 +291,13 @@ public class TwoChainzOpMode extends OpMode
         telemetry.addData("load:", String.format("alt: %d, tgt: %d, state: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), loadState));
     }
 
+    @Override
+    public void stop()
+    {
+        //FIXME once we have the trigger firing working, make this reverse to the 2-ball-loaded start position
+        //FIXME maybe make the arm and claw reset to starting positions as well
+    }
+
     double determinePowerFromInput(double dVal)
     {
         double power = dVal;
@@ -329,4 +347,3 @@ public class TwoChainzOpMode extends OpMode
         return dScale;
     }
 }
-
