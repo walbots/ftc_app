@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
@@ -37,13 +38,12 @@ public class TwoChainzOpMode extends OpMode
     int     triggerPosition; // values: 0 start position (2 balls loaded), 1 mid position (1 ball loaded), 2 stop position (all fired), -1 (resetting to start position)
 
     // constants to tweak certain movements
-
-    static public final double LAUNCH_POWER         = 0.5f;
+    static public final double LAUNCH_POWER         = 0.3f;
     static public final double FILTER_ALTITUDE      = 0.25f;
     static public final double FILTER_ROTATE        = 0.25f;
     static public final double PICK_UP              = 1f;
-    static public final double LOAD                 = 0.3f;
-    static public final double STOW                 = 0f;
+    static public final double LOAD                 = 0.5f;
+    static public final double STOW                 = .1f;
     static public final int    ALTITUDE_UP          = -200;
     static public final int    ALTITUDE_DOWN        = 1200;
     static public final double ENCODER_POWER        = 0.75f;
@@ -55,7 +55,7 @@ public class TwoChainzOpMode extends OpMode
 
     //static public double INTERVAL_COOLING   = 1f;
     static public final double INTERVAL_LAUNCHING   = 2f;
-    static public final double INTERVAL_TRIGGER     = 1f;
+    static public final double INTERVAL_TRIGGER     = 3f;
     static public final double INTERVAL_REVERSING   = 1f;
     static public final double INTERVAL_PICKUP      = 1f;
     static public final double INTERVAL_LOAD        = 1f;
@@ -80,7 +80,7 @@ public class TwoChainzOpMode extends OpMode
 
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
-
+        triggerServo.setDirection(DcMotorSimple.Direction.REVERSE);
         motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
         //motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
         clawServoRight.setDirection(Servo.Direction.REVERSE);
@@ -132,14 +132,16 @@ public class TwoChainzOpMode extends OpMode
 
         if (gamepad2.dpad_down)
         {
-            motorLaunchLeft.setPower(REVERSE_POWER);
-            motorLaunchRight.setPower(REVERSE_POWER);
+            triggerServo.setPower(-TRIGGER_POWER);
         }
 
-        if (gamepad2.dpad_up)
+        else if (gamepad2.dpad_up)
         {
-            motorLaunchLeft.setPower(0f);
-            motorLaunchRight.setPower(0f);
+            triggerServo.setPower(TRIGGER_POWER);
+        }
+        else if (triggerMoveTime == 0)
+        {
+            triggerServo.setPower(0f);
         }
 
         // if the launch motors aren't cooling off,
@@ -154,6 +156,7 @@ public class TwoChainzOpMode extends OpMode
             triggerMoveTime = time + INTERVAL_TRIGGER;
             triggerServo.setPower(TRIGGER_POWER);
             //we gave the motors a chance to power up
+            launchTime = time + INTERVAL_LAUNCHING;
         }
 
         // If servoWaitTime is enabled (>0) and servoWaitTime has expired, move the servo
@@ -289,6 +292,7 @@ public class TwoChainzOpMode extends OpMode
         //telemetry.addData("barrel", String.format("launch: %.2f\tcool: %.2f", launchTime, coolTime));
         telemetry.addData("barrel:", String.format("launch: %.2f", launchTime));
         telemetry.addData("load:", String.format("alt: %d, tgt: %d, state: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), loadState));
+        telemetry.addData("trigger", String.format("TL: %.2f, P: %.2f" , triggerMoveTime, triggerServo.getPower()));
     }
 
     @Override
