@@ -269,7 +269,7 @@ public class TwoChainzOpMode extends OpMode
     {
         motorLeftWheels.resetDeviceConfigurationForOpMode();
         motorRightWheels.resetDeviceConfigurationForOpMode();
-        motorAltitude.resetDeviceConfigurationForOpMode();
+        //motorAltitude.resetDeviceConfigurationForOpMode();
         motorRotate.resetDeviceConfigurationForOpMode();
         motorLaunchLeft.resetDeviceConfigurationForOpMode();
         motorLaunchRight.resetDeviceConfigurationForOpMode();
