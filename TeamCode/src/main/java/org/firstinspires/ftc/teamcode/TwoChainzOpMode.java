@@ -27,8 +27,6 @@ public class TwoChainzOpMode extends OpMode
 
     boolean barrelLowering;
     boolean barrelRaising;
-    boolean barrelReadying;
-    double  grabTime;
     double  launchPower    = 0.3f;
     double  loadTime;
     double  reverseTime;
@@ -51,11 +49,9 @@ public class TwoChainzOpMode extends OpMode
 
     // constants to use for timer intervals
 
-    static public final double INTERVAL_LAUNCHING  = 1f;
-    static public final double INTERVAL_LOAD       = 1f;
-    static public final double INTERVAL_PICKUP     = 1f;
-    static public final double INTERVAL_REVERSING  = 1f;
-    static public final double INTERVAL_TRIGGER    = 3f;
+    static public final double INTERVAL_LOAD      = 1f;
+    static public final double INTERVAL_REVERSING = 1f;
+    static public final double INTERVAL_TRIGGER   = 1f;
 
     @Override
     public void init()
@@ -75,6 +71,8 @@ public class TwoChainzOpMode extends OpMode
         motorAltitude.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+        triggerServo.setPower(0f);
+
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
 
@@ -85,23 +83,16 @@ public class TwoChainzOpMode extends OpMode
 
         // reset the timers & state variables before their first use
 
-        triggerServo.setPower(0f);
-
-        barrelRaising  = false;
-        barrelReadying = false;
         barrelLowering = false;
-        grabTime       = 0f;
         loadTime       = 0f;
         reverseTime    = 0f;
+        barrelRaising  = false;
         spinUpTime     = 0f;
     }
 
     @Override
     public void loop()
     {
-        String loadState   = "NOT LOADING";
-        String spinUpState = "OFF";
-
         // compute the power from the appropriate gamepad input
 
         double powerLeftDrive  = determinePowerFromInput(gamepad1.left_stick_y);
@@ -171,7 +162,7 @@ public class TwoChainzOpMode extends OpMode
 
             if (spinUpTime == 0f)
             {
-                spinUpTime = time + INTERVAL_LAUNCHING;
+                spinUpTime = time + INTERVAL_TRIGGER;
             }
         }
         else // launch motors stop
@@ -222,7 +213,6 @@ public class TwoChainzOpMode extends OpMode
             clawServoRight.setPosition(STOW);
             motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             triggerServo.setPower(0f);
-            barrelReadying = true;
         }
 
         // manually raise or lower the claw
@@ -241,29 +231,24 @@ public class TwoChainzOpMode extends OpMode
 
         // print some helpful diagnostic messages to the driver controller app
 
+        String currentState = "NONE";
+        String spinUpState  = "OFF";
+
         if (barrelRaising)
         {
-            loadState = "barrelRaising";
-        }
-        else if (grabTime > 0f)
-        {
-            loadState = "grabTime";
+            currentState = "barrelRaising";
         }
         else if (barrelLowering)
         {
-            loadState = "barrelLowering";
+            currentState = "barrelLowering";
         }
         else if (loadTime > 0f)
         {
-            loadState = "loadTime";
+            currentState = "loadTime";
         }
         else if (reverseTime > 0f)
         {
-            loadState = "reverseTime";
-        }
-        else if (barrelReadying)
-        {
-            loadState = "barrelReadying";
+            currentState = "reverseTime";
         }
 
         if (spinUpTime > 0f)
@@ -271,11 +256,11 @@ public class TwoChainzOpMode extends OpMode
             spinUpState = "ON";
         }
 
-        telemetry.addData("barrel:", String.format("spin up: %s\tlaunch lt rt: %.2f %.2f", spinUpState, motorLaunchLeft.getPower(), motorLaunchRight.getPower()));
-        telemetry.addData("trigger", String.format("trigger power: %.2f", triggerServo.getPower()));
+        telemetry.addData("barrel:", String.format("left: %.2f\tright: %.2f", motorLaunchLeft.getPower(), motorLaunchRight.getPower()));
+        telemetry.addData("trigger", String.format("spin up: %s\ttrigger power: %.2f", spinUpState, triggerServo.getPower()));
         telemetry.addData("arm", String.format("rotate: %.2f\taltitude: %.2f", powerRotate, powerAltitude));
         telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", powerLeftDrive, powerRightDrive));
-        telemetry.addData("load:", String.format("alt: %d\ttgt: %d\tstate: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), loadState));
+        telemetry.addData("load:", String.format("alt: %d\ttgt: %d\tstate: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), currentState));
         telemetry.addData("launch power", String.format("currently: %.2f", launchPower));
     }
 
