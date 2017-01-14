@@ -195,7 +195,7 @@ public class TwoChainzAutonomousOpMode extends OpMode
         }
 
         telemetry.addData("state:", String.format("%s", currentState));
-        telemetry.addData("arm", String.format("altitude: %.2f\ttarget: %.2f", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition()));
+        telemetry.addData("arm", String.format("altitude: %d\ttarget: %d", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition()));
         telemetry.addData("trigger", String.format("spin up: %s\ttrigger power: %.2f", spinUpState, triggerServo.getPower()));
         telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", motorLeftWheels.getPower(), motorRightWheels.getPower()));
         telemetry.addData("barrel:", String.format("left: %.2f\tright: %.2f", motorLaunchLeft.getPower(), motorLaunchRight.getPower()));
