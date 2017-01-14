@@ -43,7 +43,6 @@ public class TwoChainzOpMode extends OpMode
     static public final int    ALTITUDE_DOWN          = 1200;
     static public final double ENCODER_POWER          = 0.75f;
     static public final double REVERSE_POWER          = -0.5f;
-    static public final double CLAW_INCREMENT         = 0.1f;
     static public final double TRIGGER_POWER          = 0.5f;
     static public final double LAUNCH_POWER_INCREMENT = 0.0005f;
 
@@ -219,14 +218,14 @@ public class TwoChainzOpMode extends OpMode
 
         if (gamepad2.right_trigger > 0f)
         {
-            clawServoRight.setPosition(Range.clip(clawServoRight.getPosition() + CLAW_INCREMENT, 0.0f, 1.0f));
-            clawServoLeft.setPosition(Range.clip(clawServoLeft.getPosition() + CLAW_INCREMENT, 0.0f ,1.0f));
+            clawServoRight.setPosition(STOW);
+            clawServoLeft.setPosition(STOW);
         }
 
         if (gamepad2.left_trigger > 0f)
         {
-            clawServoRight.setPosition(Range.clip(clawServoRight.getPosition() - CLAW_INCREMENT, 0.0f, 1.0f));
-            clawServoLeft.setPosition(Range.clip(clawServoLeft.getPosition() - CLAW_INCREMENT, 0.0f, 1.0f));
+            clawServoRight.setPosition(PICK_UP);
+            clawServoLeft.setPosition(PICK_UP);
         }
 
         // print some helpful diagnostic messages to the driver controller app
@@ -262,6 +261,7 @@ public class TwoChainzOpMode extends OpMode
         telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", powerLeftDrive, powerRightDrive));
         telemetry.addData("load:", String.format("alt: %d\ttgt: %d\tstate: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), currentState));
         telemetry.addData("launch power", String.format("currently: %.2f", launchPower));
+        telemetry.addData("claw", String.format("position: left %.2f\tright: %.2f", clawServoLeft.getPosition(), clawServoRight.getPosition()));
     }
 
     @Override
