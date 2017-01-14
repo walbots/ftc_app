@@ -35,7 +35,7 @@ public class TwoChainzAutonomousOpMode extends OpMode
     // constants to tweak certain movements
 
     static public final double STOW             = 1f;
-    static public final int    ALTITUDE_FIRE    = -15575;
+    static public final int    ALTITUDE_FIRE    = -1500;
     static public final int    ALTITUDE_UP      = 0;
     static public final double AUTO_DRIVE_POWER = -1f;
     static public final double ENCODER_POWER    = 0.75f;
@@ -45,7 +45,7 @@ public class TwoChainzAutonomousOpMode extends OpMode
     // constants to use for timer intervals
 
     static public final double INTERVAL_DRIVE1    = 1f;
-    static public final double INTERVAL_LAUNCHING = 7f;
+    static public final double INTERVAL_LAUNCHING = 4f;
     static public final double INTERVAL_TRIGGER   = 1f;
     static public final double INTERVAL_DRIVE2    = 2f;
 
@@ -70,7 +70,7 @@ public class TwoChainzAutonomousOpMode extends OpMode
 
         clawServoLeft.setPosition(STOW);
         clawServoRight.setPosition(STOW);
-
+        triggerServo.setDirection(DcMotor.Direction.REVERSE);
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
 
