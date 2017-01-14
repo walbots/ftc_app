@@ -4,7 +4,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
@@ -20,45 +19,43 @@ public class TwoChainzOpMode extends OpMode
     DcMotor motorLaunchLeft;
     DcMotor motorLaunchRight;
 
-    CRServo triggerServo;
     Servo   clawServoLeft;
     Servo   clawServoRight;
+    CRServo triggerServo;
 
     // timer & state variables
 
-    // double    coolTime;
-    double  launchTime;
-    double  reverseTime;
-    double  loadTime;
-    double  grabTime;
-    double  triggerMoveTime;
-    boolean barrelRaising;
     boolean barrelLowering;
+    boolean barrelRaising;
     boolean barrelReadying;
-    int     triggerPosition; // values: 0 start position (2 balls loaded), 1 mid position (1 ball loaded), 2 stop position (all fired), -1 (resetting to start position)
+    double  grabTime;
+    double  launchPower    = 0.3f;
+    double  loadTime;
+    double  reverseTime;
+    double  spinUpTime;
 
     // constants to tweak certain movements
-    static public final double LAUNCH_POWER         = 0.3f;
-    static public final double FILTER_ALTITUDE      = 0.25f;
-    static public final double FILTER_ROTATE        = 0.25f;
-    static public final double PICK_UP              = 1f;
-    static public final double LOAD                 = 0.5f;
-    static public final double STOW                 = .1f;
-    static public final int    ALTITUDE_UP          = -200;
-    static public final int    ALTITUDE_DOWN        = 1200;
-    static public final double ENCODER_POWER        = 0.75f;
-    static public final double REVERSE_POWER        = -0.5f;
-    static public final double CLAW_INCREMENT       = 0.1f;
-    static public final double TRIGGER_POWER        = 0.5f;
+
+    static public final double FILTER_ALTITUDE        = 0.25f;
+    static public final double FILTER_ROTATE          = 0.25f;
+    static public final double PICK_UP                = 0f;
+    static public final double LOAD                   = 0.75f;
+    static public final double STOW                   = 1f;
+    static public final int    ALTITUDE_UP            = -700;
+    static public final int    ALTITUDE_DOWN          = 1200;
+    static public final double ENCODER_POWER          = 0.75f;
+    static public final double REVERSE_POWER          = -0.5f;
+    static public final double CLAW_INCREMENT         = 0.1f;
+    static public final double TRIGGER_POWER          = 0.5f;
+    static public final double LAUNCH_POWER_INCREMENT = 0.0005f;
 
     // constants to use for timer intervals
 
-    //static public double INTERVAL_COOLING   = 1f;
-    static public final double INTERVAL_LAUNCHING   = 2f;
-    static public final double INTERVAL_TRIGGER     = 3f;
-    static public final double INTERVAL_REVERSING   = 1f;
-    static public final double INTERVAL_PICKUP      = 1f;
-    static public final double INTERVAL_LOAD        = 1f;
+    static public final double INTERVAL_LAUNCHING  = 1f;
+    static public final double INTERVAL_LOAD       = 1f;
+    static public final double INTERVAL_PICKUP     = 1f;
+    static public final double INTERVAL_REVERSING  = 1f;
+    static public final double INTERVAL_TRIGGER    = 3f;
 
     @Override
     public void init()
@@ -80,133 +77,118 @@ public class TwoChainzOpMode extends OpMode
 
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
-        triggerServo.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        triggerServo.setDirection(DcMotor.Direction.REVERSE);
         motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
         //motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
         clawServoRight.setDirection(Servo.Direction.REVERSE);
+
         // reset the timers & state variables before their first use
-        clawServoLeft.setPosition(STOW);
-        clawServoRight.setPosition(STOW);
+
         triggerServo.setPower(0f);
-        //  coolTime    = 0f;
-        launchTime      = 0f;
-        grabTime        = 0f;
-        loadTime        = 0f;
-        reverseTime     = 0f;
-        barrelRaising   = false;
-        barrelReadying  = false;
-        barrelLowering  = false;
-        triggerMoveTime = 0f;
-        triggerPosition = 0;
+
+        barrelRaising  = false;
+        barrelReadying = false;
+        barrelLowering = false;
+        grabTime       = 0f;
+        loadTime       = 0f;
+        reverseTime    = 0f;
+        spinUpTime     = 0f;
     }
 
     @Override
     public void loop()
     {
-        String loadState = "NOT LOADING";
+        String loadState   = "NOT LOADING";
+        String spinUpState = "OFF";
 
         // compute the power from the appropriate gamepad input
 
-        double powerLeftDrive   = determinePowerFromInput(gamepad1.left_stick_y);
-        double powerRightDrive  = determinePowerFromInput(gamepad1.right_stick_y);
-        double powerRotate      = determinePowerFromInput(gamepad2. left_stick_x) * FILTER_ROTATE;
-        double powerAltitude    = determinePowerFromInput(gamepad2.right_stick_y) * FILTER_ALTITUDE;
+        double powerLeftDrive  = determinePowerFromInput(gamepad1.left_stick_y);
+        double powerRightDrive = determinePowerFromInput(gamepad1.right_stick_y);
+        double powerRotate     = determinePowerFromInput(gamepad2. left_stick_x) * FILTER_ROTATE;
+        double powerAltitude   = determinePowerFromInput(gamepad2.right_stick_y) * FILTER_ALTITUDE;
 
-        // apply the computer power
+        // apply the computed power
 
         motorLeftWheels.setPower(powerLeftDrive);
         motorRightWheels.setPower(powerRightDrive);
         motorRotate.setPower(powerRotate);
+
+        // clear any automatic elevation of the arm
+
+        if (gamepad2.x)
+        {
+            motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
 
         if (motorAltitude.getMode() != DcMotor.RunMode.RUN_TO_POSITION)
         {
             motorAltitude.setPower(powerAltitude);
         }
 
-        // print some helpful diagnostic messages to the driver controller app
-
-        telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", powerLeftDrive, powerRightDrive));
-        telemetry.addData("arm", String.format("rotate: %.2f\taltitude: %.2f", powerRotate, powerAltitude));
-
-        // manual override for the reverse process of the barrel loading
+        // reverse or advance the trigger mechanism
 
         if (gamepad2.dpad_down)
         {
             triggerServo.setPower(-TRIGGER_POWER);
         }
-
         else if (gamepad2.dpad_up)
         {
-            triggerServo.setPower(TRIGGER_POWER);
+            // ignore trigger advance until the launch motors are spun up
+
+            if (spinUpTime > 0f && spinUpTime <= time)
+            {
+                triggerServo.setPower(TRIGGER_POWER);
+            }
         }
-        else if (triggerMoveTime == 0)
+        else
         {
             triggerServo.setPower(0f);
         }
 
-        // if the launch motors aren't cooling off,
-        // trigger the launch motors when gamepad2.right_bumper is pressed
+        // adjust launchPower
 
-        if (gamepad2.right_bumper)// && coolTime <= time)
+        if (gamepad2.y)
         {
-            motorLaunchLeft.setPower(LAUNCH_POWER);           // fire launch motor at full power
-            motorLaunchRight.setPower(LAUNCH_POWER);          // fire launch motor at full power
-            // set a launchTime to stop the launch motors after
-            //   coolTime = 0f;                          // reset the coolTime for later use
-            triggerMoveTime = time + INTERVAL_TRIGGER;
-            triggerServo.setPower(TRIGGER_POWER);
-            //we gave the motors a chance to power up
-            launchTime = time + INTERVAL_LAUNCHING;
+            launchPower = launchPower + LAUNCH_POWER_INCREMENT;
+            launchPower = Range.clip(launchPower, 0f, 1f);
+        }
+        else if (gamepad2.a)
+        {
+            launchPower = launchPower - LAUNCH_POWER_INCREMENT;
+            launchPower = Range.clip(launchPower, 0f, 1f);
         }
 
-        // If servoWaitTime is enabled (>0) and servoWaitTime has expired, move the servo
-        // to trigger the ball in the launcher
+        // trigger the launch motors
 
-
-        if (triggerMoveTime <= time && triggerMoveTime > 0f)
+        if (gamepad2.right_bumper)
         {
-            triggerMoveTime = 0;
-            triggerServo.setPower(0f);
-            triggerPosition++;
+            motorLaunchLeft.setPower(launchPower);
+            motorLaunchRight.setPower(launchPower);
+
+            // set a spinUpTime to freeze the trigger until the launch motors are ready
+
+            if (spinUpTime == 0f)
+            {
+                spinUpTime = time + INTERVAL_LAUNCHING;
+            }
+        }
+        else // launch motors stop
+        {
+            spinUpTime = 0f;
+            motorLaunchLeft.setPower(0f);
+            motorLaunchRight.setPower(0f);
         }
 
-        if (triggerPosition == 2)
-        {
-            triggerPosition = -1;
-            triggerServo.setPower(-TRIGGER_POWER);
-            triggerMoveTime = time + 2*INTERVAL_TRIGGER;
-        }
-
-        if (launchTime <= time && launchTime > 0f)
-        {
-            launchTime = 0f;                    // reset the launchTime for later use
-            motorLaunchLeft.setPower(0f);       // turn off the launch motor
-            motorLaunchRight.setPower(0f);      // turn off the launch motor
-            // coolTime = time + INTERVAL_COOLING; // set coolTime to prevent the launch motors from burning out from repeated use
-        }
+        // automate the loading of the ball when the claw has grabbed it manually
 
         if (gamepad2.left_bumper)
         {
+            triggerServo.setPower(Range.clip(-2f*TRIGGER_POWER, -1f, 0f));
             motorAltitude.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             motorAltitude.setPower(ENCODER_POWER);
-            motorAltitude.setTargetPosition (ALTITUDE_UP);
-            barrelRaising = true;
-        }
-
-        if (!motorAltitude.isBusy() && barrelRaising)
-        {
-            barrelRaising = false;
-            motorAltitude.setPower(0f);
-            clawServoRight.setPosition(PICK_UP);
-            clawServoLeft.setPosition(PICK_UP);
-            grabTime = time + INTERVAL_PICKUP;
-        }
-
-        if (grabTime <= time && grabTime > 0f)
-        {
-            grabTime = 0f;
-            motorAltitude.setPower(ENCODER_POWER);
-            motorAltitude.setTargetPosition(ALTITUDE_DOWN);
+            motorAltitude.setTargetPosition (ALTITUDE_DOWN);
             barrelLowering = true;
         }
 
@@ -219,19 +201,19 @@ public class TwoChainzOpMode extends OpMode
             loadTime = time + INTERVAL_LOAD;
         }
 
-        if (loadTime <= time && loadTime > 0f)
+        if (loadTime > 0f && loadTime <= time)
         {
             loadTime = 0f;
             clawServoLeft.setPosition(PICK_UP);
             clawServoRight.setPosition(PICK_UP);
-            motorAltitude.setTargetPosition (ALTITUDE_UP);
-            motorAltitude.setPower(ENCODER_POWER);
             motorLaunchLeft.setPower(REVERSE_POWER);
             motorLaunchRight.setPower(REVERSE_POWER);
+            motorAltitude.setPower(ENCODER_POWER);
+            motorAltitude.setTargetPosition (ALTITUDE_UP);
             reverseTime = time + INTERVAL_REVERSING;
         }
 
-        if (reverseTime <= time && reverseTime > 0f)
+        if (reverseTime > 0f && reverseTime <= time)
         {
             reverseTime = 0f;
             motorLaunchLeft.setPower(0f);
@@ -239,8 +221,11 @@ public class TwoChainzOpMode extends OpMode
             clawServoLeft.setPosition(STOW);
             clawServoRight.setPosition(STOW);
             motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            triggerServo.setPower(0f);
             barrelReadying = true;
         }
+
+        // manually raise or lower the claw
 
         if (gamepad2.right_trigger > 0f)
         {
@@ -254,52 +239,58 @@ public class TwoChainzOpMode extends OpMode
             clawServoLeft.setPosition(Range.clip(clawServoLeft.getPosition() - CLAW_INCREMENT, 0.0f, 1.0f));
         }
 
-        if (gamepad2.x)
-        {
-            motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        }
+        // print some helpful diagnostic messages to the driver controller app
 
         if (barrelRaising)
         {
             loadState = "barrelRaising";
         }
-
         else if (grabTime > 0f)
         {
             loadState = "grabTime";
         }
-
         else if (barrelLowering)
         {
             loadState = "barrelLowering";
         }
-
         else if (loadTime > 0f)
         {
             loadState = "loadTime";
         }
-
         else if (reverseTime > 0f)
         {
             loadState = "reverseTime";
         }
-
         else if (barrelReadying)
         {
             loadState = "barrelReadying";
         }
 
-        //telemetry.addData("barrel", String.format("launch: %.2f\tcool: %.2f", launchTime, coolTime));
-        telemetry.addData("barrel:", String.format("launch: %.2f", launchTime));
-        telemetry.addData("load:", String.format("alt: %d, tgt: %d, state: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), loadState));
-        telemetry.addData("trigger", String.format("TL: %.2f, P: %.2f" , triggerMoveTime, triggerServo.getPower()));
+        if (spinUpTime > 0f)
+        {
+            spinUpState = "ON";
+        }
+
+        telemetry.addData("barrel:", String.format("spin up: %s\tlaunch lt rt: %.2f %.2f", spinUpState, motorLaunchLeft.getPower(), motorLaunchRight.getPower()));
+        telemetry.addData("trigger", String.format("trigger power: %.2f", triggerServo.getPower()));
+        telemetry.addData("arm", String.format("rotate: %.2f\taltitude: %.2f", powerRotate, powerAltitude));
+        telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", powerLeftDrive, powerRightDrive));
+        telemetry.addData("load:", String.format("alt: %d\ttgt: %d\tstate: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), loadState));
+        telemetry.addData("launch power", String.format("currently: %.2f", launchPower));
     }
 
     @Override
     public void stop()
     {
-        //FIXME once we have the trigger firing working, make this reverse to the 2-ball-loaded start position
-        //FIXME maybe make the arm and claw reset to starting positions as well
+        motorLeftWheels.resetDeviceConfigurationForOpMode();
+        motorRightWheels.resetDeviceConfigurationForOpMode();
+        motorAltitude.resetDeviceConfigurationForOpMode();
+        motorRotate.resetDeviceConfigurationForOpMode();
+        motorLaunchLeft.resetDeviceConfigurationForOpMode();
+        motorLaunchRight.resetDeviceConfigurationForOpMode();
+        clawServoLeft.resetDeviceConfigurationForOpMode();
+        clawServoRight.resetDeviceConfigurationForOpMode();
+        triggerServo.resetDeviceConfigurationForOpMode();
     }
 
     double determinePowerFromInput(double dVal)
