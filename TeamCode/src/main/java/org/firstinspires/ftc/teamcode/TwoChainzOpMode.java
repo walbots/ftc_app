@@ -27,7 +27,8 @@ public class TwoChainzOpMode extends OpMode
 
     boolean barrelLowering;
     boolean barrelRaising;
-    double  launchPower    = 0.3f;
+    double  launchPower     = 0.08f;
+    boolean launchPowerAdjusting;
     double  loadTime;
     double  reverseTime;
     double  spinUpTime;
@@ -39,17 +40,17 @@ public class TwoChainzOpMode extends OpMode
     static public final double PICK_UP                = 0f;
     static public final double LOAD                   = 0.75f;
     static public final double STOW                   = 1f;
-    static public final int    ALTITUDE_UP            = -700;
-    static public final int    ALTITUDE_DOWN          = 1200;
+    static public final int    ALTITUDE_UP            = -1500;
+    static public final int    ALTITUDE_DOWN          = 1400;
     static public final double ENCODER_POWER          = 0.75f;
     static public final double REVERSE_POWER          = -0.5f;
     static public final double TRIGGER_POWER          = 0.5f;
-    static public final double LAUNCH_POWER_INCREMENT = 0.0005f;
+    static public final double LAUNCH_POWER_INCREMENT = 0.025f;
 
     // constants to use for timer intervals
 
     static public final double INTERVAL_LOAD      = 1f;
-    static public final double INTERVAL_REVERSING = 1f;
+    static public final double INTERVAL_REVERSING = 2f;
     static public final double INTERVAL_TRIGGER   = 1f;
 
     @Override
@@ -69,6 +70,7 @@ public class TwoChainzOpMode extends OpMode
 
         motorAltitude.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        motorAltitude.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         triggerServo.setPower(0f);
 
@@ -80,13 +82,17 @@ public class TwoChainzOpMode extends OpMode
         //motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
         clawServoRight.setDirection(Servo.Direction.REVERSE);
 
+        motorLaunchLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motorLaunchRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         // reset the timers & state variables before their first use
 
-        barrelLowering = false;
-        loadTime       = 0f;
-        reverseTime    = 0f;
-        barrelRaising  = false;
-        spinUpTime     = 0f;
+        barrelLowering       = false;
+        loadTime             = 0f;
+        reverseTime          = 0f;
+        barrelRaising        = false;
+        spinUpTime           = 0f;
+        launchPowerAdjusting = false;
     }
 
     @Override
@@ -139,15 +145,28 @@ public class TwoChainzOpMode extends OpMode
 
         // adjust launchPower
 
-        if (gamepad2.y)
+        if (gamepad2.y && launchPowerAdjusting == false)
         {
             launchPower = launchPower + LAUNCH_POWER_INCREMENT;
             launchPower = Range.clip(launchPower, 0f, 1f);
+            launchPowerAdjusting = true;
         }
-        else if (gamepad2.a)
+        else if (gamepad2.a && launchPowerAdjusting == false)
         {
             launchPower = launchPower - LAUNCH_POWER_INCREMENT;
             launchPower = Range.clip(launchPower, 0f, 1f);
+            launchPowerAdjusting = true;
+        }
+        else if (gamepad2.y == false && gamepad2.a == false)
+        {
+            launchPowerAdjusting = false;
+        }
+
+        if(gamepad2.x == true)
+        {
+            motorAltitude.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            motorAltitude.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         }
 
         // trigger the launch motors
@@ -208,8 +227,6 @@ public class TwoChainzOpMode extends OpMode
             reverseTime = 0f;
             motorLaunchLeft.setPower(0f);
             motorLaunchRight.setPower(0f);
-            clawServoLeft.setPosition(STOW);
-            clawServoRight.setPosition(STOW);
             motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             triggerServo.setPower(0f);
         }
