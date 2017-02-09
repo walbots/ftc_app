@@ -12,8 +12,10 @@ public class TwoChainzOpMode extends OpMode
 {
     // software-hardware proxy object variables
 
-    DcMotor motorLeftWheels;
-    DcMotor motorRightWheels;
+    DcMotor motorLeftFrontWheels;
+    DcMotor motorLeftRearWheels;
+    DcMotor motorRightFrontWheels;
+    DcMotor motorRightRearWheels;
     DcMotor motorAltitude;
     DcMotor motorRotate;
     DcMotor motorLaunchLeft;
@@ -58,15 +60,17 @@ public class TwoChainzOpMode extends OpMode
     {
         // grab references to all of the software-hardware proxy objects
 
-        motorLeftWheels  = hardwareMap.get(DcMotor.class, "leftwheel");
-        motorRightWheels = hardwareMap.get(DcMotor.class, "rightwheel");
-        motorAltitude    = hardwareMap.get(DcMotor.class, "altitude");
-        motorRotate      = hardwareMap.get(DcMotor.class, "rotate");
-        triggerServo     = hardwareMap.get(CRServo.class, "trigger");
-        clawServoLeft    = hardwareMap.get(Servo.class,   "clawleft");
-        clawServoRight   = hardwareMap.get(Servo.class,   "clawright");
-        motorLaunchLeft  = hardwareMap.get(DcMotor.class, "launchleft");
-        motorLaunchRight = hardwareMap.get(DcMotor.class, "launchright");
+        motorLeftFrontWheels  = hardwareMap.get(DcMotor.class, "lfwheel");
+        motorRightFrontWheels = hardwareMap.get(DcMotor.class, "rfwheel");
+        motorLeftRearWheels   = hardwareMap.get(DcMotor.class, "lrwheel");
+        motorRightRearWheels  = hardwareMap.get(DcMotor.class, "rrwheel");
+        motorAltitude         = hardwareMap.get(DcMotor.class, "altitude");
+        motorRotate           = hardwareMap.get(DcMotor.class, "rotate");
+        triggerServo          = hardwareMap.get(CRServo.class, "trigger");
+        clawServoLeft         = hardwareMap.get(Servo.class,   "clawleft");
+        clawServoRight        = hardwareMap.get(Servo.class,   "clawright");
+        motorLaunchLeft       = hardwareMap.get(DcMotor.class, "launchleft");
+        motorLaunchRight      = hardwareMap.get(DcMotor.class, "launchright");
 
         motorAltitude.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -100,22 +104,42 @@ public class TwoChainzOpMode extends OpMode
     {
         // compute the power from the appropriate gamepad input
 
-        double powerLeftDrive  = determinePowerFromInput(gamepad1.left_stick_y);
-        double powerRightDrive = determinePowerFromInput(gamepad1.right_stick_y);
-        double powerRotate     = determinePowerFromInput(gamepad2. left_stick_x) * FILTER_ROTATE;
-        double powerAltitude   = determinePowerFromInput(gamepad2.right_stick_y) * FILTER_ALTITUDE;
+        double powerLeftDrive     = determinePowerFromInput(gamepad1.left_stick_y);
+        double powerRightDrive    = determinePowerFromInput(gamepad1.right_stick_y);
+        double powerRotate        = determinePowerFromInput(gamepad2.left_stick_x) * FILTER_ROTATE;
+        double powerAltitude      = determinePowerFromInput(gamepad2.right_stick_y) * FILTER_ALTITUDE;
+        double powerLeftMovement  = determinePowerFromInput(gamepad1.left_trigger);
+        double powerRightMovement = determinePowerFromInput(gamepad1.right_trigger);
 
         // apply the computed power
 
-        motorLeftWheels.setPower(powerLeftDrive);
-        motorRightWheels.setPower(powerRightDrive);
+        motorLeftFrontWheels.setPower(powerLeftDrive);
+        motorRightFrontWheels.setPower(powerRightDrive);
+        motorLeftRearWheels.setPower(powerLeftDrive);
+        motorRightRearWheels.setPower(powerRightDrive);
+
         motorRotate.setPower(powerRotate);
 
-        // clear any automatic elevation of the arm
-
-        if (gamepad2.x)
+        if (powerLeftDrive == 0 && powerRightDrive == 0)
         {
+            if (powerLeftMovement > 0)
+            {
+                leftSidewinderMovement(powerLeftMovement);
+            }
+            else
+            {
+                // negative reverses the direction of the wheels as determined by the sidewinder method
+                leftSidewinderMovement(-powerRightMovement);
+            }
+        }
+
+        // zero the altitude and clear any automatic elevation of the arm
+
+        if(gamepad2.x == true)
+        {
+            motorAltitude.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            motorAltitude.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         }
 
         if (motorAltitude.getMode() != DcMotor.RunMode.RUN_TO_POSITION)
@@ -160,13 +184,6 @@ public class TwoChainzOpMode extends OpMode
         else if (gamepad2.y == false && gamepad2.a == false)
         {
             launchPowerAdjusting = false;
-        }
-
-        if(gamepad2.x == true)
-        {
-            motorAltitude.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            motorAltitude.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         }
 
         // trigger the launch motors
@@ -284,8 +301,10 @@ public class TwoChainzOpMode extends OpMode
     @Override
     public void stop()
     {
-        motorLeftWheels.resetDeviceConfigurationForOpMode();
-        motorRightWheels.resetDeviceConfigurationForOpMode();
+        motorLeftFrontWheels.resetDeviceConfigurationForOpMode();
+        motorRightFrontWheels.resetDeviceConfigurationForOpMode();
+        motorLeftRearWheels.resetDeviceConfigurationForOpMode();
+        motorRightRearWheels.resetDeviceConfigurationForOpMode();
         //motorAltitude.resetDeviceConfigurationForOpMode();
         motorRotate.resetDeviceConfigurationForOpMode();
         motorLaunchLeft.resetDeviceConfigurationForOpMode();
@@ -342,5 +361,13 @@ public class TwoChainzOpMode extends OpMode
 
         // return scaled value.
         return dScale;
+    }
+
+    public void leftSidewinderMovement(double power)
+    {
+        motorLeftFrontWheels.setPower(-power);
+        motorLeftRearWheels.setPower(power);
+        motorRightFrontWheels.setPower(power);
+        motorRightRearWheels.setPower(-power);
     }
 }
