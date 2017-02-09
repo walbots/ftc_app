@@ -35,19 +35,19 @@ public class TwoChainzAutonomousOpMode extends OpMode
     // constants to tweak certain movements
 
     static public final double STOW             = 1f;
-    static public final int    ALTITUDE_FIRE    = -1500;
+    static public final int    ALTITUDE_FIRE    = -1550;
     static public final int    ALTITUDE_UP      = 0;
     static public final double AUTO_DRIVE_POWER = -1f;
-    static public final double ENCODER_POWER    = 0.75f;
-    static public final double LAUNCH_POWER     = 0.3f;
+    static public final double ENCODER_POWER    = 0.6f;
+    static public final double LAUNCH_POWER     = 0.12f;
     static public final double TRIGGER_POWER    = 0.5f;
 
     // constants to use for timer intervals
 
-    static public final double INTERVAL_DRIVE1    = 1f;
+    static public final double INTERVAL_DRIVE1    = 0f;
     static public final double INTERVAL_LAUNCHING = 4f;
     static public final double INTERVAL_TRIGGER   = 1f;
-    static public final double INTERVAL_DRIVE2    = 2f;
+    static public final double INTERVAL_DRIVE2    = 3f;
 
     @Override
     public void init()
@@ -67,7 +67,7 @@ public class TwoChainzAutonomousOpMode extends OpMode
         motorAltitude.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorAltitude.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         motorAltitude.setPower(ENCODER_POWER);
-
+        motorAltitude.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         clawServoLeft.setPosition(STOW);
         clawServoRight.setPosition(STOW);
         triggerServo.setDirection(DcMotor.Direction.REVERSE);
@@ -77,6 +77,9 @@ public class TwoChainzAutonomousOpMode extends OpMode
         motorLaunchRight.setDirection(DcMotor.Direction.REVERSE);
         //motorRightWheels.setDirection(DcMotor.Direction.REVERSE);
         clawServoRight.setDirection(Servo.Direction.REVERSE);
+
+        motorLaunchLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motorLaunchRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // reset the timers & state variables before their first use
 
@@ -97,8 +100,8 @@ public class TwoChainzAutonomousOpMode extends OpMode
         if (startingAutonomous)
         {
             startingAutonomous = false;
-            motorLeftWheels.setPower(AUTO_DRIVE_POWER);
-            motorRightWheels.setPower(AUTO_DRIVE_POWER);
+            motorLeftWheels.setPower(0f);
+            motorRightWheels.setPower(0f);
             driveTime1 = time + INTERVAL_DRIVE1;
         }
 
