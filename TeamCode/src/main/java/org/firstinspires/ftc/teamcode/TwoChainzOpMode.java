@@ -3,9 +3,15 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.I2cAddr;
+import com.qualcomm.robotcore.hardware.I2cDevice;
+import com.qualcomm.robotcore.hardware.I2cDeviceSynch;
+import com.qualcomm.robotcore.hardware.I2cDeviceSynchImpl;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+
 
 @TeleOp(name="TwoChainz", group="Walbots")
 public class TwoChainzOpMode extends OpMode
@@ -20,10 +26,20 @@ public class TwoChainzOpMode extends OpMode
     DcMotor motorRotate;
     DcMotor motorLaunchLeft;
     DcMotor motorLaunchRight;
-
+    ColorSensor colorSensor;
     Servo   clawServoLeft;
     Servo   clawServoRight;
     CRServo triggerServo;
+
+    // range sensor, taken from: http://www.modernroboticsinc.com/range-sensor
+
+    byte[] rangeAcache;
+    byte[] rangeCcache;
+
+    I2cDevice rangeA;
+    I2cDevice rangeC;
+    I2cDeviceSynch rangeAreader;
+    I2cDeviceSynch rangeCreader;
 
     // timer & state variables
 
@@ -59,23 +75,37 @@ public class TwoChainzOpMode extends OpMode
     {
         // grab references to all of the software-hardware proxy objects
 
-        motorLeftFrontWheels  = hardwareMap.get(DcMotor.class, "lfwheel");
-        motorRightFrontWheels = hardwareMap.get(DcMotor.class, "rfwheel");
-        motorLeftRearWheels   = hardwareMap.get(DcMotor.class, "lrwheel");
-        motorRightRearWheels  = hardwareMap.get(DcMotor.class, "rrwheel");
-        motorAltitude         = hardwareMap.get(DcMotor.class, "altitude");
-        motorRotate           = hardwareMap.get(DcMotor.class, "rotate");
-        triggerServo          = hardwareMap.get(CRServo.class, "trigger");
-        clawServoLeft         = hardwareMap.get(Servo.class,   "clawleft");
-        clawServoRight        = hardwareMap.get(Servo.class,   "clawright");
-        motorLaunchLeft       = hardwareMap.get(DcMotor.class, "launchleft");
-        motorLaunchRight      = hardwareMap.get(DcMotor.class, "launchright");
+        motorLeftFrontWheels  = hardwareMap.get(DcMotor.class,     "lfwheel");
+        motorRightFrontWheels = hardwareMap.get(DcMotor.class,     "rfwheel");
+        motorLeftRearWheels   = hardwareMap.get(DcMotor.class,     "lrwheel");
+        motorRightRearWheels  = hardwareMap.get(DcMotor.class,     "rrwheel");
+        motorAltitude         = hardwareMap.get(DcMotor.class,     "altitude");
+        motorRotate           = hardwareMap.get(DcMotor.class,     "rotate");
+        triggerServo          = hardwareMap.get(CRServo.class,     "trigger");
+        clawServoLeft         = hardwareMap.get(Servo.class,       "clawleft");
+        clawServoRight        = hardwareMap.get(Servo.class,       "clawright");
+        motorLaunchLeft       = hardwareMap.get(DcMotor.class,     "launchleft");
+        motorLaunchRight      = hardwareMap.get(DcMotor.class,     "launchright");
+        colorSensor           = hardwareMap.get(ColorSensor.class, "color");
+
+        colorSensor.enableLed(false);
+
+        // range sensor, taken from: http://www.modernroboticsinc.com/range-sensor
+
+        rangeA = hardwareMap.i2cDevice.get("range28");
+        rangeC = hardwareMap.i2cDevice.get("range2a");
+
+        rangeAreader = new I2cDeviceSynchImpl(rangeA, I2cAddr.create8bit(0x28), false);
+        rangeCreader = new I2cDeviceSynchImpl(rangeC, I2cAddr.create8bit(0x2a), false);
+
+        rangeAreader.engage();
+        rangeCreader.engage();
+
+        // altitude motor setup
 
         motorAltitude.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motorAltitude.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        triggerServo.setPower(0f);
 
         // configure the motors to default to the reverse of their typical direction,
         // to compensate for the motors needing to rotate in concert with their partner motors
@@ -108,13 +138,24 @@ public class TwoChainzOpMode extends OpMode
         double powerAltitude      = determinePowerFromInput(gamepad2.right_stick_y) * FILTER_ALTITUDE;
         double powerLeftMovement  = determinePowerFromInput(gamepad1.left_trigger);
         double powerRightMovement = determinePowerFromInput(gamepad1.right_trigger);
-        double powerSidewinder    = (powerLeftMovement > 0f) ? powerLeftMovement : -powerRightMovement; // negative reverses the direction of the wheels as determined by the sidewinder method
+        double powerSidewinder    = (powerLeftMovement > 0f) ? -powerLeftMovement : powerRightMovement; // negative reverses the direction of the wheels as determined by the sidewinder method
 
         // apply the computed power
 
         motorRotate.setPower(powerRotate);
 
-        leftSidewinderMovement(powerSidewinder, powerLeftDrive, powerRightDrive);
+        if (powerSidewinder == 0f)
+        {
+            motorLeftFrontWheels.setPower(powerLeftDrive);
+            motorLeftRearWheels.setPower(powerLeftDrive);
+            motorRightFrontWheels.setPower(powerRightDrive);
+            motorRightRearWheels.setPower(powerRightDrive);
+        }
+        else
+        {
+            leftSidewinderMovement(powerSidewinder, powerLeftDrive, powerRightDrive);
+        }
+
 
         // zero the altitude and clear any automatic elevation of the arm
 
@@ -187,7 +228,7 @@ public class TwoChainzOpMode extends OpMode
             barrelLowering = true;
         }
 
-        if (!motorAltitude.isBusy() && barrelLowering)
+        if (barrelLowering && !motorAltitude.isBusy())
         {
             barrelLowering = false;
             motorAltitude.setPower(0f);
@@ -251,13 +292,30 @@ public class TwoChainzOpMode extends OpMode
             currentState = "reverseTime";
         }
 
+        telemetry.addData("sensors", String.format("color: R%d G%d B%d", colorSensor.red(), colorSensor.green(), colorSensor.blue()));
         telemetry.addData("barrel:", String.format("left: %.2f\tright: %.2f", motorLaunchLeft.getPower(), motorLaunchRight.getPower()));
         telemetry.addData("trigger", String.format("trigger power: %.2f", triggerServo.getPower()));
         telemetry.addData("arm", String.format("rotate: %.2f\taltitude: %.2f", powerRotate, powerAltitude));
         telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", (powerLeftDrive == 0f) ? powerLeftMovement : powerLeftDrive, (powerRightDrive == 0f) ? powerRightMovement : powerRightDrive));
         telemetry.addData("load:", String.format("alt: %d\ttgt: %d\tstate: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), currentState));
-        telemetry.addData("launch power", String.format("currently: %.2f", launchPower));
+        telemetry.addData("launch power", String.format("currently: %.3f", launchPower));
         telemetry.addData("claw", String.format("position: left %.2f\tright: %.2f", clawServoLeft.getPosition(), clawServoRight.getPosition()));
+
+        // range sensor, taken from: http://www.modernroboticsinc.com/range-sensor
+
+        rangeAcache = rangeAreader.read(0x04, 2);  //Read 2 bytes starting at 0x04
+        rangeCcache = rangeCreader.read(0x04, 2);
+
+        int RUS = rangeCcache[0] & 0xFF;   //Ultrasonic value is at index 0. & 0xFF creates a value between 0 and 255 instead of -127 to 128
+        int LUS = rangeAcache[0] & 0xFF;
+        int RODS = rangeCcache[1] & 0xFF;
+        int LODS = rangeAcache[1] & 0xFF;
+
+        //display values
+        telemetry.addData("1 A US", LUS);
+        telemetry.addData("2 A ODS", LODS);
+        telemetry.addData("3 C US", RUS);
+        telemetry.addData("4 C ODS", RODS);
     }
 
     @Override
@@ -327,26 +385,24 @@ public class TwoChainzOpMode extends OpMode
 
     public void leftSidewinderMovement(double power, double leftStick, double rightStick)
     {
-        if (leftStick == 0f)
+        double leftFrontSidePower   = power;
+        double rightFrontSidePower  = power;
+
+        if (leftStick != 0f)
         {
-            motorLeftFrontWheels.setPower(-power);
-            motorLeftRearWheels.setPower(power);
-        }
-        else
-        {
-            motorLeftFrontWheels.setPower(leftStick);
-            motorLeftRearWheels.setPower(leftStick);
+            // bias rightFrontSidePower, so that we prefer leftFrontSidePower
+            rightFrontSidePower = rightFrontSidePower * leftStick;
         }
 
-        if (rightStick == 0f)
+        if (rightStick != 0f)
         {
-            motorRightFrontWheels.setPower(-power);
-            motorRightRearWheels.setPower(power);
+            // bias rightFrontSidePower, so that we prefer leftFrontSidePower
+            leftFrontSidePower = leftFrontSidePower * rightStick;
         }
-        else
-        {
-            motorRightFrontWheels.setPower(rightStick);
-            motorRightRearWheels.setPower(rightStick);
-        }
+
+        motorLeftFrontWheels.setPower(-leftFrontSidePower);
+        motorLeftRearWheels.setPower(rightFrontSidePower);
+        motorRightFrontWheels.setPower(-rightFrontSidePower);
+        motorRightRearWheels.setPower(leftFrontSidePower);
     }
 }
