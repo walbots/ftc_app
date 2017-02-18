@@ -29,11 +29,10 @@ public class TwoChainzOpMode extends OpMode
 
     boolean barrelLowering;
     boolean barrelRaising;
-    double  launchPower     = 0.08f;
+    double  launchPower     = 0.015f;
     boolean launchPowerAdjusting;
     double  loadTime;
     double  reverseTime;
-    double  spinUpTime;
 
     // constants to tweak certain movements
 
@@ -47,7 +46,7 @@ public class TwoChainzOpMode extends OpMode
     static public final double ENCODER_POWER          = 0.75f;
     static public final double REVERSE_POWER          = -0.5f;
     static public final double TRIGGER_POWER          = 0.5f;
-    static public final double LAUNCH_POWER_INCREMENT = 0.025f;
+    static public final double LAUNCH_POWER_INCREMENT = 0.005f;
 
     // constants to use for timer intervals
 
@@ -95,7 +94,6 @@ public class TwoChainzOpMode extends OpMode
         loadTime             = 0f;
         reverseTime          = 0f;
         barrelRaising        = false;
-        spinUpTime           = 0f;
         launchPowerAdjusting = false;
     }
 
@@ -110,28 +108,13 @@ public class TwoChainzOpMode extends OpMode
         double powerAltitude      = determinePowerFromInput(gamepad2.right_stick_y) * FILTER_ALTITUDE;
         double powerLeftMovement  = determinePowerFromInput(gamepad1.left_trigger);
         double powerRightMovement = determinePowerFromInput(gamepad1.right_trigger);
+        double powerSidewinder    = (powerLeftMovement > 0f) ? powerLeftMovement : -powerRightMovement; // negative reverses the direction of the wheels as determined by the sidewinder method
 
         // apply the computed power
 
-        motorLeftFrontWheels.setPower(powerLeftDrive);
-        motorRightFrontWheels.setPower(powerRightDrive);
-        motorLeftRearWheels.setPower(powerLeftDrive);
-        motorRightRearWheels.setPower(powerRightDrive);
-
         motorRotate.setPower(powerRotate);
 
-        if (powerLeftDrive == 0 && powerRightDrive == 0)
-        {
-            if (powerLeftMovement > 0)
-            {
-                leftSidewinderMovement(powerLeftMovement);
-            }
-            else
-            {
-                // negative reverses the direction of the wheels as determined by the sidewinder method
-                leftSidewinderMovement(-powerRightMovement);
-            }
-        }
+        leftSidewinderMovement(powerSidewinder, powerLeftDrive, powerRightDrive);
 
         // zero the altitude and clear any automatic elevation of the arm
 
@@ -141,8 +124,7 @@ public class TwoChainzOpMode extends OpMode
             motorAltitude.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             motorAltitude.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         }
-
-        if (motorAltitude.getMode() != DcMotor.RunMode.RUN_TO_POSITION)
+        else if (motorAltitude.getMode() != DcMotor.RunMode.RUN_TO_POSITION)
         {
             motorAltitude.setPower(powerAltitude);
         }
@@ -155,12 +137,7 @@ public class TwoChainzOpMode extends OpMode
         }
         else if (gamepad2.dpad_up)
         {
-            // ignore trigger advance until the launch motors are spun up
-
-            if (spinUpTime > 0f && spinUpTime <= time)
-            {
-                triggerServo.setPower(TRIGGER_POWER);
-            }
+            triggerServo.setPower(TRIGGER_POWER);
         }
         else
         {
@@ -192,17 +169,9 @@ public class TwoChainzOpMode extends OpMode
         {
             motorLaunchLeft.setPower(launchPower);
             motorLaunchRight.setPower(launchPower);
-
-            // set a spinUpTime to freeze the trigger until the launch motors are ready
-
-            if (spinUpTime == 0f)
-            {
-                spinUpTime = time + INTERVAL_TRIGGER;
-            }
         }
         else // launch motors stop
         {
-            spinUpTime = 0f;
             motorLaunchLeft.setPower(0f);
             motorLaunchRight.setPower(0f);
         }
@@ -255,8 +224,7 @@ public class TwoChainzOpMode extends OpMode
             clawServoRight.setPosition(STOW);
             clawServoLeft.setPosition(STOW);
         }
-
-        if (gamepad2.left_trigger > 0f)
+        else if (gamepad2.left_trigger > 0f)
         {
             clawServoRight.setPosition(PICK_UP);
             clawServoLeft.setPosition(PICK_UP);
@@ -265,7 +233,6 @@ public class TwoChainzOpMode extends OpMode
         // print some helpful diagnostic messages to the driver controller app
 
         String currentState = "NONE";
-        String spinUpState  = "OFF";
 
         if (barrelRaising)
         {
@@ -284,15 +251,10 @@ public class TwoChainzOpMode extends OpMode
             currentState = "reverseTime";
         }
 
-        if (spinUpTime > 0f)
-        {
-            spinUpState = "ON";
-        }
-
         telemetry.addData("barrel:", String.format("left: %.2f\tright: %.2f", motorLaunchLeft.getPower(), motorLaunchRight.getPower()));
-        telemetry.addData("trigger", String.format("spin up: %s\ttrigger power: %.2f", spinUpState, triggerServo.getPower()));
+        telemetry.addData("trigger", String.format("trigger power: %.2f", triggerServo.getPower()));
         telemetry.addData("arm", String.format("rotate: %.2f\taltitude: %.2f", powerRotate, powerAltitude));
-        telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", powerLeftDrive, powerRightDrive));
+        telemetry.addData("wheels", String.format("left: %.2f\tright: %.2f", (powerLeftDrive == 0f) ? powerLeftMovement : powerLeftDrive, (powerRightDrive == 0f) ? powerRightMovement : powerRightDrive));
         telemetry.addData("load:", String.format("alt: %d\ttgt: %d\tstate: %s", motorAltitude.getCurrentPosition(), motorAltitude.getTargetPosition(), currentState));
         telemetry.addData("launch power", String.format("currently: %.2f", launchPower));
         telemetry.addData("claw", String.format("position: left %.2f\tright: %.2f", clawServoLeft.getPosition(), clawServoRight.getPosition()));
@@ -363,11 +325,28 @@ public class TwoChainzOpMode extends OpMode
         return dScale;
     }
 
-    public void leftSidewinderMovement(double power)
+    public void leftSidewinderMovement(double power, double leftStick, double rightStick)
     {
-        motorLeftFrontWheels.setPower(-power);
-        motorLeftRearWheels.setPower(power);
-        motorRightFrontWheels.setPower(power);
-        motorRightRearWheels.setPower(-power);
+        if (leftStick == 0f)
+        {
+            motorLeftFrontWheels.setPower(-power);
+            motorLeftRearWheels.setPower(power);
+        }
+        else
+        {
+            motorLeftFrontWheels.setPower(leftStick);
+            motorLeftRearWheels.setPower(leftStick);
+        }
+
+        if (rightStick == 0f)
+        {
+            motorRightFrontWheels.setPower(-power);
+            motorRightRearWheels.setPower(power);
+        }
+        else
+        {
+            motorRightFrontWheels.setPower(rightStick);
+            motorRightRearWheels.setPower(rightStick);
+        }
     }
 }
