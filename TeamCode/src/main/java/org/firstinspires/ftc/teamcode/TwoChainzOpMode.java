@@ -54,11 +54,11 @@ public class TwoChainzOpMode extends OpMode
 
     static public final double FILTER_ALTITUDE        = 0.25f;
     static public final double FILTER_ROTATE          = 0.25f;
-    static public final double PICK_UP                = 0f;
-    static public final double LOAD                   = 0.75f;
-    static public final double STOW                   = 1f;
+    static public final double PICK_UP                = 1f;
+    static public final double LOAD                   = 0.25f;
+    static public final double STOW                   = 0f;
     static public final int    ALTITUDE_UP            = -1500;
-    static public final int    ALTITUDE_DOWN          = 1400;
+    static public final int    ALTITUDE_DOWN          = 1300;//was 1400
     static public final double ENCODER_POWER          = 0.75f;
     static public final double REVERSE_POWER          = -0.5f;
     static public final double TRIGGER_POWER          = 0.5f;
